@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Personal Finance & Salary Tracker API",
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  },
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
