@@ -6,6 +6,10 @@ import { incomeSourcesRouter } from "../modules/income-sources/income-sources.ro
 import { incomeRouter } from "../modules/income/income.routes.js";
 import { categoriesRouter, subcategoriesRouter } from "../modules/categories/categories.routes.js";
 import { transactionsRouter } from "../modules/transactions/transactions.routes.js";
+import { budgetTemplatesRouter } from "../modules/budgets/budget-templates.routes.js";
+import { budgetsRouter } from "../modules/budgets/budgets.routes.js";
+import { fixedExpensesRouter } from "../modules/fixed-expenses/fixed-expenses.routes.js";
+import { recurringTransactionsRouter } from "../modules/recurring-transactions/recurring-transactions.routes.js";
 
 export const apiRouter = Router();
 
@@ -16,4 +20,8 @@ apiRouter.use("/income", incomeRouter);
 apiRouter.use("/categories", categoriesRouter);
 apiRouter.use("/subcategories", subcategoriesRouter);
 apiRouter.use("/transactions", transactionsRouter);
+apiRouter.use("/budget-templates", budgetTemplatesRouter);
+apiRouter.use("/budgets", budgetsRouter);
+apiRouter.use("/fixed-expenses", fixedExpensesRouter);
+apiRouter.use("/recurring-transactions", recurringTransactionsRouter);
 apiRouter.use("/health", healthRouter);

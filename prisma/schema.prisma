@@ -20,6 +20,10 @@ model User {
   incomeTransactions IncomeTransaction[]
   categories   Category[]
   transactions Transaction[]
+  fixedExpenses FixedExpense[]
+  recurringTransactions RecurringTransaction[]
+  budgetTemplates BudgetTemplate[]
+  monthlyBudgets MonthlyBudget[]
 
   @@map("users")
 }
@@ -36,6 +40,8 @@ model Account {
   user           User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   incomeTransactions IncomeTransaction[]
   transactions       Transaction[]
+  fixedExpenses      FixedExpense[]
+  recurringTransactions RecurringTransaction[]
 
   @@index([userId])
   @@map("accounts")
@@ -72,6 +78,8 @@ model IncomeTransaction {
   user                  User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   incomeSource          IncomeSource @relation(fields: [incomeSourceId], references: [id], onDelete: Restrict)
   account               Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  monthlyBudgets        MonthlyBudget[]
+  recurringTransaction  RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: Restrict)
 
   @@index([userId, receivedDate])
   @@map("income_transactions")
@@ -89,6 +97,10 @@ model Category {
   user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   subcategories Subcategory[]
   transactions  Transaction[]
+  budgetTemplateItems BudgetTemplateItem[]
+  monthlyBudgetItems MonthlyBudgetItem[]
+  fixedExpenses FixedExpense[]
+  recurringTransactions RecurringTransaction[]
 
   @@unique([userId, name, categoryType])
   @@index([userId])
@@ -105,6 +117,8 @@ model Subcategory {
   updatedAt   DateTime @updatedAt @map("updated_at")
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   transactions Transaction[]
+  fixedExpenses FixedExpense[]
+  recurringTransactions RecurringTransaction[]
 
   @@unique([categoryId, name])
   @@index([categoryId])
@@ -130,7 +144,131 @@ model Transaction {
   account                 Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category                Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   subcategory             Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Restrict)
+  recurringTransaction    RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: Restrict)
 
   @@index([userId, transactionDate])
   @@map("transactions")
+}
+
+model BudgetTemplate {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  name          String   @db.VarChar(100)
+  description   String?
+  isActive      Boolean  @default(false) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items         BudgetTemplateItem[]
+  monthlyBudgets MonthlyBudget[]
+
+  @@index([userId])
+  @@map("budget_templates")
+}
+
+model BudgetTemplateItem {
+  id               String   @id @default(uuid()) @db.Uuid
+  budgetTemplateId String   @map("budget_template_id") @db.Uuid
+  categoryId       String   @map("category_id") @db.Uuid
+  percentage       Decimal  @db.Decimal(5, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  budgetTemplate   BudgetTemplate @relation(fields: [budgetTemplateId], references: [id], onDelete: Cascade)
+  category         Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([budgetTemplateId, categoryId])
+  @@index([categoryId])
+  @@map("budget_template_items")
+}
+
+model MonthlyBudget {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  budgetTemplateId    String   @map("budget_template_id") @db.Uuid
+  incomeTransactionId String   @map("income_transaction_id") @db.Uuid
+  month               Int
+  year                Int
+  allocatedAmount     Decimal  @map("allocated_amount") @db.Decimal(15, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  budgetTemplate      BudgetTemplate @relation(fields: [budgetTemplateId], references: [id], onDelete: Restrict)
+  incomeTransaction   IncomeTransaction @relation(fields: [incomeTransactionId], references: [id], onDelete: Restrict)
+  items               MonthlyBudgetItem[]
+
+  @@unique([userId, year, month])
+  @@index([userId, year, month])
+  @@map("monthly_budgets")
+}
+
+model MonthlyBudgetItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  monthlyBudgetId String   @map("monthly_budget_id") @db.Uuid
+  categoryId      String   @map("category_id") @db.Uuid
+  allocatedAmount Decimal  @map("allocated_amount") @db.Decimal(15, 2)
+  spentAmount     Decimal  @default(0) @map("spent_amount") @db.Decimal(15, 2)
+  percentage      Decimal  @db.Decimal(5, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  monthlyBudget   MonthlyBudget @relation(fields: [monthlyBudgetId], references: [id], onDelete: Cascade)
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([monthlyBudgetId, categoryId])
+  @@index([categoryId])
+  @@map("monthly_budget_items")
+}
+
+model FixedExpense {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  name          String   @db.VarChar(150)
+  amount        Decimal  @db.Decimal(15, 2)
+  categoryId    String   @map("category_id") @db.Uuid
+  subcategoryId String   @map("subcategory_id") @db.Uuid
+  accountId     String   @map("account_id") @db.Uuid
+  frequency     String   @db.VarChar(30)
+  nextDueDate   DateTime @map("next_due_date") @db.Date
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  autoGenerate  Boolean  @default(true) @map("auto_generate")
+  isActive      Boolean  @default(true) @map("is_active")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  category      Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Restrict)
+  account       Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([userId, nextDueDate])
+  @@map("fixed_expenses")
+}
+
+model RecurringTransaction {
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @map("user_id") @db.Uuid
+  name                   String   @db.VarChar(150)
+  transactionType        String   @map("transaction_type") @db.VarChar(30)
+  amount                 Decimal  @db.Decimal(15, 2)
+  categoryId             String?  @map("category_id") @db.Uuid
+  subcategoryId          String?  @map("subcategory_id") @db.Uuid
+  accountId              String   @map("account_id") @db.Uuid
+  paymentMethod          String?  @map("payment_method") @db.VarChar(30)
+  frequency              String   @db.VarChar(30)
+  startDate              DateTime @map("start_date") @db.Date
+  endDate                DateTime? @map("end_date") @db.Date
+  nextRunDate            DateTime @map("next_run_date") @db.Date
+  isActive               Boolean  @default(true) @map("is_active")
+  notes                  String?
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  account                Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category               Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategory            Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Restrict)
+  transactions           Transaction[]
+  incomeTransactions     IncomeTransaction[]
+
+  @@index([userId, nextRunDate])
+  @@map("recurring_transactions")
 }

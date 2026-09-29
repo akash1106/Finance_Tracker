@@ -6,6 +6,10 @@ import { healthPaths } from "../modules/health/health.swagger.js";
 import { incomePaths } from "../modules/income/income.swagger.js";
 import { incomeSourcesPaths } from "../modules/income-sources/income-sources.swagger.js";
 import { transactionsPaths } from "../modules/transactions/transactions.swagger.js";
+import { budgetTemplatesPaths } from "../modules/budgets/budget-templates.swagger.js";
+import { budgetsPaths } from "../modules/budgets/budgets.swagger.js";
+import { fixedExpensesPaths } from "../modules/fixed-expenses/fixed-expenses.swagger.js";
+import { recurringTransactionsPaths } from "../modules/recurring-transactions/recurring-transactions.swagger.js";
 
 export const swaggerSpec: OpenAPIV3.Document = {
   openapi: "3.0.3",
@@ -23,6 +27,10 @@ export const swaggerSpec: OpenAPIV3.Document = {
   paths: {
     ...accountsPaths,
     ...authPaths,
+    ...budgetTemplatesPaths,
+    ...budgetsPaths,
+    ...fixedExpensesPaths,
+    ...recurringTransactionsPaths,
     ...categoriesPaths,
     ...healthPaths,
     ...incomePaths,
@@ -206,6 +214,190 @@ export const swaggerSpec: OpenAPIV3.Document = {
       TransactionResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/Transaction" } } }] },
       TransactionListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/Transaction" } }, pagination: { $ref: "#/components/schemas/Pagination" } } }] },
       Pagination: { type: "object", properties: { page: { type: "integer" }, limit: { type: "integer" }, total: { type: "integer" }, totalPages: { type: "integer" } } },
+      CreateBudgetTemplateRequest: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", maxLength: 100, example: "Normal Salary Budget" },
+          description: { type: "string", maxLength: 1000 },
+          isActive: { type: "boolean", default: false },
+        },
+      },
+      UpdateBudgetTemplateRequest: { allOf: [{ $ref: "#/components/schemas/CreateBudgetTemplateRequest" }] },
+      BudgetTemplateItem: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          budgetTemplateId: { type: "string", format: "uuid" },
+          categoryId: { type: "string", format: "uuid" },
+          percentage: { type: "string", example: "30.00" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateBudgetTemplateItemRequest: {
+        type: "object",
+        required: ["categoryId", "percentage"],
+        properties: {
+          categoryId: { type: "string", format: "uuid" },
+          percentage: { type: "number", minimum: 0, exclusiveMinimum: true, maximum: 100, example: 30 },
+        },
+      },
+      UpdateBudgetTemplateItemRequest: {
+        type: "object",
+        required: ["percentage"],
+        properties: { percentage: { type: "number", minimum: 0, exclusiveMinimum: true, maximum: 100, example: 30 } },
+      },
+      BudgetTemplate: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          description: { type: "string", nullable: true },
+          isActive: { type: "boolean" },
+          items: { type: "array", items: { $ref: "#/components/schemas/BudgetTemplateItem" } },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      BudgetTemplateResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/BudgetTemplate" } } }] },
+      BudgetTemplateItemResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/BudgetTemplateItem" } } }] },
+      BudgetTemplateListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/BudgetTemplate" } } } }] },
+      BudgetValidationResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/SuccessResponse" },
+          { type: "object", properties: { data: { type: "object", properties: { valid: { type: "boolean" }, totalPercentage: { type: "string", example: "100.00" } } } } },
+        ],
+      },
+      GenerateBudgetRequest: {
+        type: "object",
+        required: ["incomeTransactionId", "budgetTemplateId"],
+        properties: {
+          incomeTransactionId: { type: "string", format: "uuid" },
+          budgetTemplateId: { type: "string", format: "uuid" },
+        },
+      },
+      MonthlyBudgetItem: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          monthlyBudgetId: { type: "string", format: "uuid" },
+          categoryId: { type: "string", format: "uuid" },
+          allocatedAmount: { type: "string", example: "5000.00" },
+          spentAmount: { type: "string", example: "2300.00" },
+          percentage: { type: "string", example: "10.00" },
+        },
+      },
+      MonthlyBudget: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          budgetTemplateId: { type: "string", format: "uuid" },
+          incomeTransactionId: { type: "string", format: "uuid" },
+          month: { type: "integer", example: 9 },
+          year: { type: "integer", example: 2026 },
+          allocatedAmount: { type: "string", example: "50000.00" },
+          items: { type: "array", items: { $ref: "#/components/schemas/MonthlyBudgetItem" } },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      MonthlyBudgetResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/MonthlyBudget" } } }] },
+      MonthlyBudgetListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/MonthlyBudget" } } } }] },
+      BudgetItemResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/MonthlyBudgetItem" } } }] },
+      BudgetItemListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/MonthlyBudgetItem" } } } }] },
+      BudgetSummaryResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/SuccessResponse" },
+          { type: "object", properties: { data: { type: "object", properties: { allocated: { type: "string" }, spent: { type: "string" }, remaining: { type: "string" }, percentageUsed: { type: "string" }, status: { type: "string", enum: ["NORMAL", "WARNING", "EXCEEDED"] } } } } },
+        ],
+      },
+      CreateFixedExpenseRequest: {
+        type: "object",
+        required: ["name", "amount", "categoryId", "subcategoryId", "accountId", "frequency", "nextDueDate", "startDate"],
+        properties: {
+          name: { type: "string", maxLength: 150, example: "Rent" },
+          amount: { type: "number", minimum: 0, exclusiveMinimum: true, example: 25000 },
+          categoryId: { type: "string", format: "uuid" },
+          subcategoryId: { type: "string", format: "uuid" },
+          accountId: { type: "string", format: "uuid" },
+          frequency: { type: "string", enum: ["WEEKLY", "MONTHLY", "YEARLY"] },
+          nextDueDate: { type: "string", format: "date" },
+          startDate: { type: "string", format: "date" },
+          endDate: { type: "string", format: "date" },
+          autoGenerate: { type: "boolean", default: true },
+          description: { type: "string", maxLength: 1000 },
+        },
+      },
+      UpdateFixedExpenseRequest: { allOf: [{ $ref: "#/components/schemas/CreateFixedExpenseRequest" }] },
+      FixedExpense: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          amount: { type: "string", example: "25000.00" },
+          categoryId: { type: "string", format: "uuid" },
+          subcategoryId: { type: "string", format: "uuid" },
+          accountId: { type: "string", format: "uuid" },
+          frequency: { type: "string", enum: ["WEEKLY", "MONTHLY", "YEARLY"] },
+          nextDueDate: { type: "string", format: "date-time" },
+          startDate: { type: "string", format: "date-time" },
+          endDate: { type: "string", format: "date-time", nullable: true },
+          autoGenerate: { type: "boolean" },
+          isActive: { type: "boolean" },
+          description: { type: "string", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      FixedExpenseResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/FixedExpense" } } }] },
+      FixedExpenseListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/FixedExpense" } } } }] },
+      CreateRecurringTransactionRequest: {
+        type: "object",
+        required: ["name", "transactionType", "amount", "accountId", "frequency", "startDate", "nextRunDate"],
+        properties: {
+          name: { type: "string", maxLength: 150, example: "Monthly Internet" },
+          transactionType: { type: "string", enum: ["EXPENSE", "TRANSFER", "SAVING", "INVESTMENT", "LOAN_PAYMENT"] },
+          amount: { type: "number", minimum: 0, exclusiveMinimum: true, example: 1500 },
+          categoryId: { type: "string", format: "uuid" },
+          subcategoryId: { type: "string", format: "uuid" },
+          accountId: { type: "string", format: "uuid" },
+          paymentMethod: { type: "string", enum: ["CASH", "UPI", "DEBIT_CARD", "BANK_TRANSFER", "OTHER"] },
+          frequency: { type: "string", enum: ["WEEKLY", "MONTHLY", "YEARLY"] },
+          startDate: { type: "string", format: "date" },
+          endDate: { type: "string", format: "date" },
+          nextRunDate: { type: "string", format: "date" },
+          notes: { type: "string", maxLength: 2000 },
+        },
+      },
+      UpdateRecurringTransactionRequest: { allOf: [{ $ref: "#/components/schemas/CreateRecurringTransactionRequest" }] },
+      RecurringTransaction: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          transactionType: { type: "string" },
+          amount: { type: "string", example: "1500.00" },
+          categoryId: { type: "string", format: "uuid", nullable: true },
+          subcategoryId: { type: "string", format: "uuid", nullable: true },
+          accountId: { type: "string", format: "uuid" },
+          paymentMethod: { type: "string", nullable: true },
+          frequency: { type: "string" },
+          startDate: { type: "string", format: "date-time" },
+          endDate: { type: "string", format: "date-time", nullable: true },
+          nextRunDate: { type: "string", format: "date-time" },
+          isActive: { type: "boolean" },
+          notes: { type: "string", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      RecurringTransactionResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/RecurringTransaction" } } }] },
+      RecurringTransactionListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/RecurringTransaction" } } } }] },
       User: {
         type: "object",
         properties: {

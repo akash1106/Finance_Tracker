@@ -12,7 +12,17 @@ export function validate(schema: ZodType, part: RequestPart = "body") {
       return;
     }
 
-    req[part] = result.data as typeof req[typeof part];
+    if (part === "query") {
+      Object.defineProperty(req, "query", {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: result.data,
+      });
+    } else {
+      req[part] = result.data as typeof req[typeof part];
+    }
+
     next();
   };
 }
