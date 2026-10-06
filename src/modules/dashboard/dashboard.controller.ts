@@ -100,3 +100,9 @@ export async function getNetWorth(req: Request, res: Response): Promise<void> {
   const netWorth = (accounts._sum.openingBalance ?? new Prisma.Decimal(0)).add(totalsResult.income).sub(totalsResult.expenses);
   res.json({ success: true, data: { assets: money(netWorth), liabilities: "0.00", netWorth: money(netWorth) } });
 }
+export async function getIncomeBreakdown(req: Request, res: Response): Promise<void> {
+  const income = await prisma.incomeTransaction.findMany({ where: { userId: owner(req) }, include: { incomeSource: { select: { name: true } } } });
+  const grouped = new Map<string, Prisma.Decimal>();
+  for (const entry of income) grouped.set(entry.incomeSource.name, (grouped.get(entry.incomeSource.name) ?? new Prisma.Decimal(0)).add(entry.amount));
+  res.json({ success: true, data: [...grouped.entries()].map(([source, amount]) => ({ source, amount: money(amount) })) });
+}

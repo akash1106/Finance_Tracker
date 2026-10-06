@@ -1,0 +1,10 @@
+import type { Request, Response } from "express";
+import { prisma } from "../../config/database.js";
+import { AppError } from "../../utils/AppError.js";
+
+function owner(req: Request): string { if (!req.auth) throw new AppError(401, "UNAUTHORIZED", "Authentication token is required"); return req.auth.userId; }
+function notificationId(req: Request): string { const id = req.params.id; if (typeof id !== "string") throw new AppError(400, "VALIDATION_ERROR", "Notification ID is required"); return id; }
+export async function listNotifications(req: Request, res: Response): Promise<void> { const notifications = await prisma.notification.findMany({ where: { userId: owner(req) }, orderBy: { createdAt: "desc" } }); res.json({ success: true, data: notifications }); }
+export async function listUnreadNotifications(req: Request, res: Response): Promise<void> { const notifications = await prisma.notification.findMany({ where: { userId: owner(req), isRead: false }, orderBy: { createdAt: "desc" } }); res.json({ success: true, data: notifications }); }
+export async function markNotificationRead(req: Request, res: Response): Promise<void> { const notification = await prisma.notification.findFirst({ where: { id: notificationId(req), userId: owner(req) } }); if (!notification) throw new AppError(404, "NOTIFICATION_NOT_FOUND", "Notification was not found"); const updated = await prisma.notification.update({ where: { id: notification.id }, data: { isRead: true } }); res.json({ success: true, data: updated, message: "Notification marked as read" }); }
+export async function markAllNotificationsRead(req: Request, res: Response): Promise<void> { await prisma.notification.updateMany({ where: { userId: owner(req), isRead: false }, data: { isRead: true } }); res.json({ success: true, data: null, message: "All notifications marked as read" }); }

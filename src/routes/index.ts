@@ -18,6 +18,8 @@ import { dashboardRouter } from "../modules/dashboard/dashboard.routes.js";
 import { reportsRouter } from "../modules/reports/reports.routes.js";
 import { analyticsRouter } from "../modules/analytics/analytics.routes.js";
 import { exportsRouter } from "../modules/exports/exports.routes.js";
+import { netWorthRouter } from "../modules/net-worth/net-worth.routes.js";
+import { notificationsRouter } from "../modules/notifications/notifications.routes.js";
 
 export const apiRouter = Router();
 
@@ -40,4 +42,6 @@ apiRouter.use("/dashboard", dashboardRouter);
 apiRouter.use("/reports", reportsRouter);
 apiRouter.use("/analytics", analyticsRouter);
 apiRouter.use("/exports", exportsRouter);
+apiRouter.use("/net-worth", netWorthRouter);
+apiRouter.use("/notifications", notificationsRouter);
 apiRouter.use("/health", healthRouter);

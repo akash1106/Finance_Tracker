@@ -18,6 +18,8 @@ import { dashboardPaths } from "../modules/dashboard/dashboard.swagger.js";
 import { reportsPaths } from "../modules/reports/reports.swagger.js";
 import { analyticsPaths } from "../modules/analytics/analytics.swagger.js";
 import { exportsPaths } from "../modules/exports/exports.swagger.js";
+import { netWorthPaths } from "../modules/net-worth/net-worth.swagger.js";
+import { notificationsPaths } from "../modules/notifications/notifications.swagger.js";
 
 export const swaggerSpec: OpenAPIV3.Document = {
   openapi: "3.0.3",
@@ -47,6 +49,8 @@ export const swaggerSpec: OpenAPIV3.Document = {
     ...reportsPaths,
     ...analyticsPaths,
     ...exportsPaths,
+    ...netWorthPaths,
+    ...notificationsPaths,
     ...categoriesPaths,
     ...healthPaths,
     ...incomePaths,
@@ -518,6 +522,13 @@ export const swaggerSpec: OpenAPIV3.Document = {
       CashFlowReportResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "object", properties: { income: { type: "string" }, expenses: { type: "string" }, savings: { type: "string" }, investments: { type: "string" }, netCashFlow: { type: "string" } } } } }] },
       TrendResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { month: { type: "string" }, amount: { type: "string" } } } } } }] },
       BudgetPerformanceResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { budgetId: { type: "string", format: "uuid" }, categoryId: { type: "string", format: "uuid" }, allocated: { type: "string" }, spent: { type: "string" }, variance: { type: "string" } } } } } }] },
+      IncomeBreakdownResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { source: { type: "string" }, amount: { type: "string" } } } } } }] },
+      CategoryTrendsResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { month: { type: "string" }, category: { type: "string" }, amount: { type: "string" } } } } } }] },
+      SavingsRateResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "object", properties: { income: { type: "string" }, savings: { type: "string" }, savingsRate: { type: "string" }, fixedExpenses: { type: "string" }, expenses: { type: "string" }, fixedExpenseRatio: { type: "string" } } } } }] },
+      NetWorthHistoryResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { period: { type: "string" }, netWorth: { type: "string" } } } } } }] },
+      Notification: { type: "object", properties: { id: { type: "string", format: "uuid" }, userId: { type: "string", format: "uuid" }, title: { type: "string" }, message: { type: "string" }, notificationType: { type: "string" }, referenceId: { type: "string", format: "uuid", nullable: true }, isRead: { type: "boolean" }, createdAt: { type: "string", format: "date-time" } } },
+      NotificationResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/Notification" } } }] },
+      NotificationListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/Notification" } } } }] },
       User: {
         type: "object",
         properties: {

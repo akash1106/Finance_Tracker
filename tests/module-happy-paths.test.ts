@@ -5,17 +5,19 @@ import request from "supertest";
 import { prisma } from "../src/config/database";
 import { createAccessToken } from "../src/modules/auth/auth.tokens";
 import { createApp } from "../src/app";
-import { getBudgetUtilization, getCashFlow, getDashboard, getExpenseBreakdown, getInvestmentHistory, getNetWorth, getSavingsHistory } from "../src/modules/dashboard/dashboard.controller";
-import { budgetPerformance, spendingTrends } from "../src/modules/analytics/analytics.controller";
+import { getBudgetUtilization, getCashFlow, getDashboard, getExpenseBreakdown, getIncomeBreakdown, getInvestmentHistory, getNetWorth, getSavingsHistory } from "../src/modules/dashboard/dashboard.controller";
+import { budgetPerformance, categoryTrends, fixedExpenseRatio, incomeGrowth, savingsRate, spendingAnomalies, spendingTrends } from "../src/modules/analytics/analytics.controller";
 import { categoryReport, cashFlowReport, monthlyReport, netWorthReport, yearlyReport } from "../src/modules/reports/reports.controller";
 import type { Request, Response } from "express";
+import { currentNetWorth, netWorthHistory } from "../src/modules/net-worth/net-worth.controller";
+import { listNotifications, listUnreadNotifications, markAllNotificationsRead, markNotificationRead } from "../src/modules/notifications/notifications.controller";
 
 const app = createApp();
 const token = createAccessToken("user-id", "user@example.com");
 const auth = { Authorization: `Bearer ${token}` };
 
-function requestContext(query: Record<string, unknown> = {}): Request {
-  return { auth: { userId: "user-id", email: "user@example.com" }, query } as unknown as Request;
+function requestContext(query: Record<string, unknown> = {}, params: Record<string, string> = {}): Request {
+  return { auth: { userId: "user-id", email: "user@example.com" }, query, params } as unknown as Request;
 }
 function responseContext(): Response {
   return { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis(), send: jest.fn().mockReturnThis() } as unknown as Response;
@@ -130,6 +132,8 @@ describe("aggregation controller coverage", () => {
     jest.spyOn(prisma.savingsContribution, "findMany").mockResolvedValue([]);
     jest.spyOn(prisma.investmentContribution, "findMany").mockResolvedValue([]);
     await getSavingsHistory(req, res); await getInvestmentHistory(req, res);
+    jest.spyOn(prisma.incomeTransaction, "findMany").mockResolvedValue([]);
+    await getIncomeBreakdown(req, res);
     expect(res.json).toHaveBeenCalled();
   });
 
@@ -147,6 +151,39 @@ describe("aggregation controller coverage", () => {
     await netWorthReport(requestContext(), res);
     jest.spyOn(prisma.monthlyBudget, "findMany").mockResolvedValue([]);
     await budgetPerformance(requestContext(), res);
+    expect(res.json).toHaveBeenCalled();
+  });
+
+  it("covers all analytics functions", async () => {
+    const req = requestContext();
+    const res = responseContext();
+    jest.spyOn(prisma.transaction, "findMany").mockResolvedValue([]);
+    jest.spyOn(prisma.incomeTransaction, "findMany").mockResolvedValue([]);
+    jest.spyOn(prisma, "$transaction").mockResolvedValue([{ _sum: { amount: null } }, { _sum: { amount: null } }] as never);
+    await categoryTrends(req, res); await spendingTrends(req, res); await incomeGrowth(req, res); await spendingAnomalies(req, res); await savingsRate(req, res); await fixedExpenseRatio(req, res);
+    expect(res.json).toHaveBeenCalled();
+  });
+
+  it("covers dedicated net-worth endpoints", async () => {
+    const req = requestContext();
+    const res = responseContext();
+    jest.spyOn(prisma, "$transaction").mockResolvedValue([{ _sum: { amount: null } }, { _sum: { amount: null } }, { _sum: { amount: null } }] as never);
+    jest.spyOn(prisma.account, "aggregate").mockResolvedValue({ _sum: { openingBalance: null } } as never);
+    await currentNetWorth(req, res);
+    jest.spyOn(prisma, "$transaction").mockResolvedValue([[], []] as never);
+    await netWorthHistory(req, res);
+    expect(res.json).toHaveBeenCalled();
+  });
+
+  it("covers notification operations", async () => {
+    const req = requestContext({}, { id: "11111111-1111-4111-8111-111111111111" });
+    const res = responseContext();
+    const notification = { id: "11111111-1111-4111-8111-111111111111", userId: "user-id", title: "Alert", message: "Test", notificationType: "BUDGET_WARNING", referenceId: null, isRead: false, createdAt: new Date() };
+    jest.spyOn(prisma.notification, "findMany").mockResolvedValue([notification]);
+    jest.spyOn(prisma.notification, "findFirst").mockResolvedValue(notification);
+    jest.spyOn(prisma.notification, "update").mockResolvedValue({ ...notification, isRead: true });
+    jest.spyOn(prisma.notification, "updateMany").mockResolvedValue({ count: 1 });
+    await listNotifications(req, res); await listUnreadNotifications(req, res); await markNotificationRead(req, res); await markAllNotificationsRead(req, res);
     expect(res.json).toHaveBeenCalled();
   });
 });
