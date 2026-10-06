@@ -12,8 +12,11 @@ function id(req: Request): string {
   if (typeof req.params.id !== "string") throw new AppError(400, "VALIDATION_ERROR", "Recurring transaction ID is required");
   return req.params.id;
 }
-function response(rule: { id: string; userId: string; name: string; transactionType: string; amount: Prisma.Decimal; categoryId: string | null; subcategoryId: string | null; accountId: string; paymentMethod: string | null; frequency: string; startDate: Date; endDate: Date | null; nextRunDate: Date; isActive: boolean; notes: string | null; createdAt: Date; updatedAt: Date }) {
-  return { ...rule, amount: rule.amount.toFixed(2) };
+function response(rule: any) {
+  return {
+    ...rule,
+    amount: typeof rule.amount === "number" ? rule.amount.toFixed(2) : rule.amount?.toFixed ? rule.amount.toFixed(2) : String(rule.amount),
+  };
 }
 function nextDate(date: Date, frequency: string): Date {
   const next = new Date(date);
@@ -38,13 +41,20 @@ async function validateReferences(input: { categoryId?: string | null; subcatego
   }
 }
 async function getOwned(req: Request) {
-  const rule = await prisma.recurringTransaction.findFirst({ where: { id: id(req), userId: owner(req) } });
+  const rule = await prisma.recurringTransaction.findFirst({
+    where: { id: id(req), userId: owner(req) },
+    include: { category: true, subcategory: true, account: true },
+  });
   if (!rule) throw new AppError(404, "RECURRING_TRANSACTION_NOT_FOUND", "Recurring transaction was not found");
   return rule;
 }
 
 export async function listRecurringTransactions(req: Request, res: Response): Promise<void> {
-  const rules = await prisma.recurringTransaction.findMany({ where: { userId: owner(req), isActive: true }, orderBy: { nextRunDate: "asc" } });
+  const rules = await prisma.recurringTransaction.findMany({
+    where: { userId: owner(req), isActive: true },
+    include: { category: true, subcategory: true, account: true },
+    orderBy: { nextRunDate: "asc" },
+  });
   res.json({ success: true, data: rules.map(response) });
 }
 export async function getRecurringTransaction(req: Request, res: Response): Promise<void> {

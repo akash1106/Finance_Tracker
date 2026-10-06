@@ -1,44 +1,22 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+import type {
+  RecurringTransaction,
+  CreateRecurringTransactionInput,
+  UpdateRecurringTransactionInput,
+} from "@/types/recurring";
 
-export interface RecurringTransaction {
-  id: string;
-  userId: string;
-  name: string;
-  transactionType: "INCOME" | "EXPENSE" | "TRANSFER" | string;
-  amount: number;
-  categoryId?: string | null;
-  subcategoryId?: string | null;
-  accountId: string;
-  frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" | string;
-  startDate: string;
-  endDate?: string | null;
-  nextExecutionDate: string;
-  isActive: boolean;
-  category?: { id: string; name: string };
-  account?: { id: string; name: string };
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateRecurringInput {
-  name: string;
-  transactionType: string;
-  amount: number;
-  categoryId?: string;
-  subcategoryId?: string;
-  accountId: string;
-  frequency: string;
-  startDate: string;
-  endDate?: string;
-  nextExecutionDate: string;
-}
+export type {
+  RecurringTransaction,
+  CreateRecurringTransactionInput,
+  UpdateRecurringTransactionInput,
+};
 
 export const recurringApi = {
   list: () => apiGet<RecurringTransaction[]>("/recurring-transactions"),
   getById: (id: string) => apiGet<RecurringTransaction>(`/recurring-transactions/${id}`),
-  create: (data: CreateRecurringInput) =>
+  create: (data: CreateRecurringTransactionInput) =>
     apiPost<RecurringTransaction>("/recurring-transactions", data),
-  update: (id: string, data: Partial<CreateRecurringInput>) =>
+  update: (id: string, data: Partial<CreateRecurringTransactionInput>) =>
     apiPatch<RecurringTransaction>(`/recurring-transactions/${id}`, data),
   deactivate: (id: string) => apiDelete<void>(`/recurring-transactions/${id}`),
   generate: (id: string) =>
