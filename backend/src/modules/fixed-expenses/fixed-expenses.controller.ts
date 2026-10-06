@@ -12,8 +12,11 @@ function id(req: Request): string {
   if (typeof req.params.id !== "string") throw new AppError(400, "VALIDATION_ERROR", "Fixed expense ID is required");
   return req.params.id;
 }
-function response(expense: { id: string; userId: string; name: string; amount: Prisma.Decimal; categoryId: string; subcategoryId: string; accountId: string; frequency: string; nextDueDate: Date; startDate: Date; endDate: Date | null; autoGenerate: boolean; isActive: boolean; description: string | null; createdAt: Date; updatedAt: Date }) {
-  return { ...expense, amount: expense.amount.toFixed(2) };
+function response(expense: any) {
+  return {
+    ...expense,
+    amount: typeof expense.amount === "number" ? expense.amount.toFixed(2) : expense.amount?.toFixed ? expense.amount.toFixed(2) : String(expense.amount),
+  };
 }
 function nextDate(date: Date, frequency: string): Date {
   const next = new Date(date);
@@ -38,13 +41,20 @@ async function validateReferences(input: { categoryId?: string; subcategoryId?: 
 }
 
 async function getOwned(req: Request) {
-  const expense = await prisma.fixedExpense.findFirst({ where: { id: id(req), userId: owner(req) } });
+  const expense = await prisma.fixedExpense.findFirst({
+    where: { id: id(req), userId: owner(req) },
+    include: { category: true, subcategory: true, account: true },
+  });
   if (!expense) throw new AppError(404, "FIXED_EXPENSE_NOT_FOUND", "Fixed expense was not found");
   return expense;
 }
 
 export async function listFixedExpenses(req: Request, res: Response): Promise<void> {
-  const expenses = await prisma.fixedExpense.findMany({ where: { userId: owner(req), isActive: true }, orderBy: { nextDueDate: "asc" } });
+  const expenses = await prisma.fixedExpense.findMany({
+    where: { userId: owner(req), isActive: true },
+    include: { category: true, subcategory: true, account: true },
+    orderBy: { nextDueDate: "asc" },
+  });
   res.json({ success: true, data: expenses.map(response) });
 }
 export async function getFixedExpense(req: Request, res: Response): Promise<void> {

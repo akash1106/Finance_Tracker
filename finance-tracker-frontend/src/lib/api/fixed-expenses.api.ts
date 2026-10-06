@@ -1,36 +1,7 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+import type { FixedExpense, CreateFixedExpenseInput, UpdateFixedExpenseInput } from "@/types/fixed-expense";
 
-export interface FixedExpense {
-  id: string;
-  userId: string;
-  name: string;
-  amount: number;
-  categoryId?: string | null;
-  subcategoryId?: string | null;
-  accountId: string;
-  frequency: "MONTHLY" | "QUARTERLY" | "YEARLY" | string;
-  startDate: string;
-  nextDueDate: string;
-  autoGenerate: boolean;
-  isActive: boolean;
-  category?: { id: string; name: string };
-  subcategory?: { id: string; name: string };
-  account?: { id: string; name: string };
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateFixedExpenseInput {
-  name: string;
-  amount: number;
-  categoryId?: string;
-  subcategoryId?: string;
-  accountId: string;
-  frequency: string;
-  startDate: string;
-  nextDueDate: string;
-  autoGenerate?: boolean;
-}
+export type { FixedExpense, CreateFixedExpenseInput, UpdateFixedExpenseInput };
 
 export const fixedExpensesApi = {
   list: () => apiGet<FixedExpense[]>("/fixed-expenses"),

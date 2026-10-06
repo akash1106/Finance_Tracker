@@ -10,3 +10,4 @@ export * from "./investment";
 export * from "./loan";
 export * from "./goal";
 export * from "./dashboard";
+export * from "./fixed-expense";
