@@ -8,6 +8,13 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+  CORS_ORIGIN: z.string().default("http://localhost:3000,http://localhost:5173"),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().optional(),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().optional(),
+  RATE_LIMIT_DISABLED: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;

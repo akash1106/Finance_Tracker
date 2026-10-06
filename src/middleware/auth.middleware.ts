@@ -3,20 +3,22 @@ import type { NextFunction, Request, Response } from "express";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 
-function getBearerToken(request: Request): string {
+function getAuthToken(request: Request): string {
   const authorization = request.headers.authorization;
 
-  if (!authorization?.startsWith("Bearer ")) {
-    throw new AppError(401, "UNAUTHORIZED", "Authentication token is required");
+  if (authorization?.startsWith("Bearer ")) {
+    const token = authorization.slice("Bearer ".length).trim();
+    if (token) {
+      return token;
+    }
   }
 
-  const token = authorization.slice("Bearer ".length).trim();
-
-  if (!token) {
-    throw new AppError(401, "UNAUTHORIZED", "Authentication token is required");
+  const cookieToken = request.cookies?.token;
+  if (cookieToken && typeof cookieToken === "string" && cookieToken.trim()) {
+    return cookieToken.trim();
   }
 
-  return token;
+  throw new AppError(401, "UNAUTHORIZED", "Authentication token is required");
 }
 
 export function authenticate(
@@ -25,7 +27,7 @@ export function authenticate(
   next: NextFunction,
 ): void {
   try {
-    const payload = jwt.verify(getBearerToken(request), env.JWT_SECRET);
+    const payload = jwt.verify(getAuthToken(request), env.JWT_SECRET);
 
     if (
       typeof payload === "string" ||

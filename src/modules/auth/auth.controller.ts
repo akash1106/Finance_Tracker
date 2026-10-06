@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import type { Request, Response } from "express";
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/AppError.js";
+import { env } from "../../config/env.js";
 import type { LoginInput, RegisterInput } from "./auth.schemas.js";
 import { createAccessToken } from "./auth.tokens.js";
 
@@ -71,10 +72,21 @@ export async function login(req: Request, res: Response): Promise<void> {
     throw new AppError(401, "INVALID_CREDENTIALS", "Email or password is incorrect");
   }
 
+  const accessToken = createAccessToken(user.id, user.email);
+  const isProduction = env.NODE_ENV === "production";
+
+  res.cookie("token", accessToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "strict" : "lax",
+    maxAge: 15 * 60 * 1000,
+    path: "/",
+  });
+
   res.status(200).json({
     success: true,
     data: {
-      accessToken: createAccessToken(user.id, user.email),
+      accessToken,
       user: {
         id: user.id,
         name: user.name,
@@ -84,7 +96,17 @@ export async function login(req: Request, res: Response): Promise<void> {
     message: "Login successful",
   });
 }
+
 export function logout(_req: Request, res: Response): void {
+  const isProduction = env.NODE_ENV === "production";
+
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "strict" : "lax",
+    path: "/",
+  });
+
   res.status(200).json({
     success: true,
     data: null,

@@ -14,7 +14,7 @@ const app = createApp();
 
 describe("POST /api/v1/auth/register", () => {
   it("creates a user and never returns the password hash", async () => {
-    const passwordHash = await bcrypt.hash("password123", 4);
+    const passwordHash = await bcrypt.hash("Password123!", 4);
     const createUser = jest.spyOn(prisma.user, "create").mockResolvedValue({
       id: "user-id",
       name: "Akash",
@@ -28,7 +28,7 @@ describe("POST /api/v1/auth/register", () => {
     const response = await request(app).post("/api/v1/auth/register").send({
       name: " Akash ",
       email: "User@Example.com",
-      password: "password123",
+      password: "Password123!",
     });
 
     expect(response.status).toBe(201);
@@ -47,7 +47,7 @@ describe("POST /api/v1/auth/register", () => {
         data: expect.objectContaining({
           name: "Akash",
           email: "user@example.com",
-          passwordHash: expect.not.stringMatching(/^password123$/),
+          passwordHash: expect.not.stringMatching(/^Password123!$/),
         }),
       }),
     );
@@ -64,6 +64,32 @@ describe("POST /api/v1/auth/register", () => {
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("rejects passwords lacking complexity or exceeding 72 characters", async () => {
+    const noUpper = await request(app).post("/api/v1/auth/register").send({
+      name: "Akash",
+      email: "test1@example.com",
+      password: "password123!",
+    });
+    expect(noUpper.status).toBe(400);
+    expect(noUpper.body.error.code).toBe("VALIDATION_ERROR");
+
+    const noSpecial = await request(app).post("/api/v1/auth/register").send({
+      name: "Akash",
+      email: "test2@example.com",
+      password: "Password123",
+    });
+    expect(noSpecial.status).toBe(400);
+    expect(noSpecial.body.error.code).toBe("VALIDATION_ERROR");
+
+    const tooLong = await request(app).post("/api/v1/auth/register").send({
+      name: "Akash",
+      email: "test3@example.com",
+      password: "Password123!" + "a".repeat(70),
+    });
+    expect(tooLong.status).toBe(400);
+    expect(tooLong.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("returns a conflict when the registration email already exists", async () => {
     jest.spyOn(prisma.user, "create").mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("duplicate email", {
@@ -75,15 +101,15 @@ describe("POST /api/v1/auth/register", () => {
     const response = await request(app).post("/api/v1/auth/register").send({
       name: "Akash",
       email: "existing@example.com",
-      password: "password123",
+      password: "Password123!",
     });
 
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe("EMAIL_ALREADY_EXISTS");
   });
 
-  it("returns a JWT for valid credentials", async () => {
-    const passwordHash = await bcrypt.hash("password123", 4);
+  it("returns a JWT and sets an HttpOnly cookie for valid credentials", async () => {
+    const passwordHash = await bcrypt.hash("Password123!", 4);
     jest.spyOn(prisma.user, "findUnique").mockResolvedValue({
       id: "user-id",
       name: "Akash",
@@ -96,7 +122,7 @@ describe("POST /api/v1/auth/register", () => {
 
     const response = await request(app).post("/api/v1/auth/login").send({
       email: "User@Example.com",
-      password: "password123",
+      password: "Password123!",
     });
 
     expect(response.status).toBe(200);
@@ -106,10 +132,16 @@ describe("POST /api/v1/auth/register", () => {
       email: "user@example.com",
     });
 
+    // Check JWT payload in body
     const decoded = jwt.verify(response.body.data.accessToken, env.JWT_SECRET) as jwt.JwtPayload;
     expect(decoded.sub).toBe("user-id");
     expect(decoded.email).toBe("user@example.com");
     expect(response.body.data.refreshToken).toBeUndefined();
+
+    // Check HttpOnly cookie
+    const cookies = response.headers["set-cookie"] as unknown as string[];
+    expect(cookies).toBeDefined();
+    expect(cookies.some((c) => c.includes("token=") && c.toLowerCase().includes("httponly"))).toBe(true);
   });
 
   it("rejects incorrect credentials without revealing whether the email exists", async () => {
@@ -117,7 +149,7 @@ describe("POST /api/v1/auth/register", () => {
 
     const response = await request(app).post("/api/v1/auth/login").send({
       email: "missing@example.com",
-      password: "password123",
+      password: "Password123!",
     });
 
     expect(response.status).toBe(401);
@@ -131,7 +163,7 @@ describe("POST /api/v1/auth/register", () => {
     });
   });
 
-  it("acknowledges logout without requiring a refresh token", async () => {
+  it("acknowledges logout and clears the cookie", async () => {
     const response = await request(app).post("/api/v1/auth/logout");
 
     expect(response.status).toBe(200);
@@ -140,6 +172,10 @@ describe("POST /api/v1/auth/register", () => {
       data: null,
       message: "Logout successful",
     });
+
+    const cookies = response.headers["set-cookie"] as unknown as string[];
+    expect(cookies).toBeDefined();
+    expect(cookies.some((c) => c.includes("token=;"))).toBe(true);
   });
 
   it("rejects /me when the access token is missing", async () => {
@@ -163,7 +199,7 @@ describe("POST /api/v1/auth/register", () => {
     expect(response.body.error.message).toBe("Authentication token is invalid or expired");
   });
 
-  it("returns the authenticated user for a valid access token", async () => {
+  it("returns the authenticated user for a valid access token in Authorization header", async () => {
     jest.spyOn(prisma.user, "findUnique").mockResolvedValue({
       id: "user-id",
       name: "Akash",
@@ -187,6 +223,25 @@ describe("POST /api/v1/auth/register", () => {
       createdAt: "2026-09-28T00:00:00.000Z",
       updatedAt: "2026-09-28T00:00:00.000Z",
     });
+  });
+
+  it("returns the authenticated user when token is provided via HttpOnly Cookie", async () => {
+    jest.spyOn(prisma.user, "findUnique").mockResolvedValue({
+      id: "user-id",
+      name: "Akash",
+      email: "user@example.com",
+      passwordHash: "not-used-by-me",
+      isActive: true,
+      createdAt: new Date("2026-09-28T00:00:00.000Z"),
+      updatedAt: new Date("2026-09-28T00:00:00.000Z"),
+    });
+
+    const response = await request(app)
+      .get("/api/v1/auth/me")
+      .set("Cookie", [`token=${createAccessToken("user-id", "user@example.com")}`]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.email).toBe("user@example.com");
   });
 
   it("rejects /me when the authenticated user no longer exists", async () => {
