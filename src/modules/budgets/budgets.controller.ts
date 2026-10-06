@@ -65,6 +65,14 @@ export async function generateBudget(req: Request, res: Response): Promise<void>
 
   const month = income.receivedDate.getUTCMonth() + 1;
   const year = income.receivedDate.getUTCFullYear();
+
+  const existingBudget = await prisma.monthlyBudget.findFirst({
+    where: { userId, year, month },
+  });
+  if (existingBudget) {
+    throw new AppError(409, "BUDGET_ALREADY_EXISTS", `A monthly budget for ${year}-${String(month).padStart(2, "0")} already exists`);
+  }
+
   const allocatedAmount = income.amount;
   const items = template.items.map((item) => ({
     categoryId: item.categoryId,

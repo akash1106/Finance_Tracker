@@ -14,6 +14,7 @@ describe("budget generation", () => {
   it("allocates salary across a valid active template", async () => {
     jest.spyOn(prisma.incomeTransaction, "findFirst").mockResolvedValue({ id, userId: "user-id", amount: new Prisma.Decimal("1000"), receivedDate: new Date("2026-09-15") } as never);
     jest.spyOn(prisma.budgetTemplate, "findFirst").mockResolvedValue({ id, userId: "user-id", isActive: true, items: [{ id, budgetTemplateId: id, categoryId: id, percentage: new Prisma.Decimal("100"), createdAt: new Date(), updatedAt: new Date() }] } as never);
+    jest.spyOn(prisma.monthlyBudget, "findFirst").mockResolvedValue(null as never);
     jest.spyOn(prisma.monthlyBudget, "create").mockResolvedValue({ id, allocatedAmount: new Prisma.Decimal("1000"), items: [] } as never);
 
     await generateBudget(req, res);

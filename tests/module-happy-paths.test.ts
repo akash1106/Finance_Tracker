@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import { describe, expect, afterEach, it, jest } from "@jest/globals";
+import { describe, expect, afterEach, beforeEach, it, jest } from "@jest/globals";
 import request from "supertest";
 import { prisma } from "../src/config/database";
 import { createAccessToken } from "../src/modules/auth/auth.tokens";
@@ -22,6 +22,12 @@ function requestContext(query: Record<string, unknown> = {}, params: Record<stri
 function responseContext(): Response {
   return { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis(), send: jest.fn().mockReturnThis() } as unknown as Response;
 }
+
+beforeEach(() => {
+  jest.spyOn(prisma.loan, "findMany").mockResolvedValue([]);
+  jest.spyOn(prisma.fixedExpense, "findMany").mockResolvedValue([]);
+  jest.spyOn(prisma.transaction, "aggregate").mockResolvedValue({ _sum: { amount: null } } as never);
+});
 
 afterEach(() => jest.restoreAllMocks());
 

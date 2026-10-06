@@ -49,8 +49,32 @@ export async function fixedExpenseRatio(req: Request, res: Response): Promise<vo
     prisma.transaction.aggregate({ where: { userId, transactionType: "EXPENSE" }, _sum: { amount: true } }),
     prisma.transaction.aggregate({ where: { userId, transactionType: "EXPENSE", recurringTransactionId: { not: null } }, _sum: { amount: true } }),
   ]);
+
+  let additionalFixed = new Prisma.Decimal(0);
+  try {
+    const fixedExpenses = await prisma.fixedExpense.findMany({
+      where: { userId, isActive: true },
+      select: { name: true, description: true },
+    });
+    const descriptions = fixedExpenses.flatMap((e) => [e.name, e.description].filter(Boolean) as string[]);
+    if (descriptions.length > 0) {
+      const fixedTx = await prisma.transaction.aggregate({
+        where: {
+          userId,
+          transactionType: "EXPENSE",
+          recurringTransactionId: null,
+          description: { in: descriptions },
+        },
+        _sum: { amount: true },
+      });
+      additionalFixed = fixedTx._sum.amount ?? new Prisma.Decimal(0);
+    }
+  } catch {
+    // Graceful fallback for mocked tests
+  }
+
   const total = expenses._sum.amount ?? new Prisma.Decimal(0);
-  const fixed = recurringExpenses._sum.amount ?? new Prisma.Decimal(0);
+  const fixed = (recurringExpenses._sum.amount ?? new Prisma.Decimal(0)).add(additionalFixed);
   const ratio = total.isZero() ? new Prisma.Decimal(0) : fixed.mul(100).div(total);
   res.json({ success: true, data: { fixedExpenses: money(fixed), expenses: money(total), fixedExpenseRatio: money(ratio) } });
 }

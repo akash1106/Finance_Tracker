@@ -30,6 +30,8 @@ describe("Account APIs", () => {
 
   it("lists only the authenticated user's active accounts", async () => {
     const findMany = jest.spyOn(prisma.account, "findMany").mockResolvedValue([account]);
+    jest.spyOn(prisma.incomeTransaction, "groupBy").mockResolvedValue([]);
+    jest.spyOn(prisma.transaction, "groupBy").mockResolvedValue([]);
 
     const response = await request(app)
       .get("/api/v1/accounts")

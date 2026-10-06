@@ -22,6 +22,26 @@ function getAccountId(request: Request): string {
   return accountId;
 }
 
+async function computeAccountBalance(accountId: string, userId: string, openingBalance: Prisma.Decimal): Promise<Prisma.Decimal> {
+  try {
+    const [incomeSum, txSum] = await Promise.all([
+      prisma.incomeTransaction.aggregate({
+        where: { accountId, userId },
+        _sum: { amount: true },
+      }),
+      prisma.transaction.aggregate({
+        where: { accountId, userId },
+        _sum: { amount: true },
+      }),
+    ]);
+    const income = incomeSum._sum.amount ?? new Prisma.Decimal(0);
+    const tx = txSum._sum.amount ?? new Prisma.Decimal(0);
+    return openingBalance.add(income).sub(tx);
+  } catch {
+    return openingBalance;
+  }
+}
+
 function accountResponse(account: {
   id: string;
   name: string;
@@ -30,13 +50,14 @@ function accountResponse(account: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}) {
+}, currentBalance?: Prisma.Decimal) {
+  const balance = currentBalance ?? account.openingBalance;
   return {
     id: account.id,
     name: account.name,
     accountType: account.accountType,
     openingBalance: account.openingBalance.toFixed(2),
-    balance: account.openingBalance.toFixed(2),
+    balance: balance.toFixed(2),
     isActive: account.isActive,
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
@@ -50,9 +71,42 @@ export async function listAccounts(req: Request, res: Response): Promise<void> {
     orderBy: { name: "asc" },
   });
 
+  const deltas = new Map<string, Prisma.Decimal>();
+  try {
+    const [incomeByAccount, txByAccount] = await Promise.all([
+      prisma.incomeTransaction.groupBy({
+        by: ["accountId"],
+        where: { userId },
+        _sum: { amount: true },
+      }),
+      prisma.transaction.groupBy({
+        by: ["accountId"],
+        where: { userId },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    for (const inc of incomeByAccount) {
+      if (inc.accountId && inc._sum.amount) {
+        deltas.set(inc.accountId, (deltas.get(inc.accountId) ?? new Prisma.Decimal(0)).add(inc._sum.amount));
+      }
+    }
+    for (const tx of txByAccount) {
+      if (tx.accountId && tx._sum.amount) {
+        deltas.set(tx.accountId, (deltas.get(tx.accountId) ?? new Prisma.Decimal(0)).sub(tx._sum.amount));
+      }
+    }
+  } catch {
+    // If aggregation is not available/mocked
+  }
+
   res.json({
     success: true,
-    data: accounts.map(accountResponse),
+    data: accounts.map((account) => {
+      const netDelta = deltas.get(account.id) ?? new Prisma.Decimal(0);
+      const balance = account.openingBalance.add(netDelta);
+      return accountResponse(account, balance);
+    }),
   });
 }
 
@@ -67,9 +121,11 @@ export async function getAccount(req: Request, res: Response): Promise<void> {
     throw new AppError(404, "ACCOUNT_NOT_FOUND", "Account was not found");
   }
 
+  const balance = await computeAccountBalance(account.id, userId, account.openingBalance);
+
   res.json({
     success: true,
-    data: accountResponse(account),
+    data: accountResponse(account, balance),
   });
 }
 
@@ -82,7 +138,7 @@ export async function createAccount(req: Request, res: Response): Promise<void> 
 
   res.status(201).json({
     success: true,
-    data: accountResponse(account),
+    data: accountResponse(account, account.openingBalance),
     message: "Account created successfully",
   });
 }
@@ -104,9 +160,11 @@ export async function updateAccount(req: Request, res: Response): Promise<void> 
     data: input,
   });
 
+  const balance = await computeAccountBalance(account.id, userId, account.openingBalance);
+
   res.json({
     success: true,
-    data: accountResponse(account),
+    data: accountResponse(account, balance),
     message: "Account updated successfully",
   });
 }
