@@ -1,4 +1,4 @@
-export type CategoryType = "EXPENSE" | "INCOME" | "SAVINGS" | "INVESTMENT";
+export type CategoryType = "EXPENSE" | "INCOME" | "SAVING" | "SAVINGS" | "INVESTMENT";
 
 export interface Subcategory {
   id: string;

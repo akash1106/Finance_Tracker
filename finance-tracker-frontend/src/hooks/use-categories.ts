@@ -8,6 +8,7 @@ import type {
   CreateCategoryInput,
   UpdateCategoryInput,
   CreateSubcategoryInput,
+  UpdateSubcategoryInput,
 } from "@/types/category";
 
 export function useCategories(type?: string) {
@@ -84,6 +85,58 @@ export function useCreateSubcategory() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to add subcategory");
+    },
+  });
+}
+
+export function useDeactivateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => categoriesApi.deactivate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all() });
+      toast.success("Category deactivated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to deactivate category");
+    },
+  });
+}
+
+export function useUpdateSubcategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      subcategoryId,
+      data,
+    }: {
+      subcategoryId: string;
+      data: UpdateSubcategoryInput;
+    }) => categoriesApi.updateSubcategory(subcategoryId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all() });
+      toast.success("Subcategory updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update subcategory");
+    },
+  });
+}
+
+export function useDeactivateSubcategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (subcategoryId: string) =>
+      categoriesApi.deactivateSubcategory(subcategoryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all() });
+      toast.success("Subcategory deactivated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to deactivate subcategory");
     },
   });
 }
