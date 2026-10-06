@@ -6,11 +6,14 @@ import { Bell, Menu, User as UserIcon, LogOut } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 import { useUiStore } from "@/store/ui-store";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnreadNotifications } from "@/hooks/use-notifications";
 
 export function Header() {
   const router = useRouter();
   const { toggleMobileSidebar } = useUiStore();
   const { user, isAuthenticated, logout } = useAuth();
+  const { data: unreadNotifications } = useUnreadNotifications();
+  const unreadCount = unreadNotifications?.length ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -56,7 +59,11 @@ export function Header() {
           className="relative h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-background">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </Link>
 
         {/* User Profile Info */}

@@ -74,6 +74,27 @@ export function DialogTrigger({
   );
 }
 
+export function DialogClose({
+  asChild,
+  children,
+  onClick,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }) {
+  const context = useDialogContext();
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        context.onOpenChange(false);
+        onClick?.(e);
+      }}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function DialogContent({
   className,
   children,
