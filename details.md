@@ -2,2075 +2,986 @@
 
 ## 1. Project Overview
 
-A personal finance management system for tracking:
+A personal finance management system for personal/local usage.
 
-* Multiple income sources
-* Salary allocation
-* Monthly budgets
-* Expenses and spending
-* Categories and subcategories
-* Fixed/recurring expenses
-* Savings
-* Investments
-* Financial goals
-* EMI/loans
-* Bank/cash accounts
-* Net worth
-* Financial reports
-* Advanced spending analytics
+The system tracks income, expenses, salary allocation, monthly budgets, fixed expenses, savings, investments, EMI/loans, financial goals, accounts, net worth, reports, analytics, notifications, and exports.
 
-### Technology
+### Primary Objective
 
-| Layer             | Technology                   |
-| ----------------- | ---------------------------- |
-| Backend           | Node.js                      |
-| API               | Express.js                   |
-| Database          | PostgreSQL                   |
-| API Style         | REST                         |
-| Authentication    | JWT                          |
-| ORM               | Prisma / Drizzle / Sequelize |
-| API Documentation | Swagger / OpenAPI            |
-| Validation        | Zod / Joi                    |
-| Testing           | Jest + Supertest             |
-| Frontend          | Next.js                      |
-| Future Mobile     | React Native / Expo          |
+> Record where money comes from, allocate income into controlled budgets, track actual spending, monitor savings and investments, and provide a complete view of personal financial health.
 
 ---
 
-# 2. Core Design Principles
+# 2. Technology Stack
 
-The backend should distinguish between:
+## Frontend
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Charting library
+- Responsive UI
+- Dark mode
+
+## Backend
+
+- Node.js
+- Express.js
+- TypeScript
+- REST API
+- JWT authentication
+- Swagger / OpenAPI
+
+## Database
+
+- PostgreSQL
+
+## ORM
+
+- Prisma recommended
+- Drizzle ORM as an alternative
+
+## Validation
+
+- Zod recommended
+
+## Testing
+
+- Jest
+- Supertest
+
+## Future Mobile Application
+
+- React Native
+- Expo
+
+The mobile application should consume the same REST API.
+
+---
+
+# 3. Main Objectives
+
+The system should allow the user to:
+
+1. Track multiple income sources.
+2. Record salary/income received.
+3. Allocate salary into customizable percentage-based budgets.
+4. Track expenses against those budgets.
+5. Warn when a budget approaches its limit.
+6. Allow spending beyond a budget while clearly showing the exceeded amount.
+7. Create and manage categories and subcategories.
+8. Track fixed and recurring expenses.
+9. Track savings and savings goals.
+10. Track investment contributions.
+11. Track EMI/loans.
+12. Track financial goals.
+13. Track bank/cash accounts.
+14. Calculate net worth.
+15. Generate monthly and yearly reports.
+16. Analyze spending trends.
+17. Export financial data to CSV/Excel.
+18. Generate monthly/yearly PDF reports.
+19. Provide a dashboard containing financial charts.
+20. Support dark mode.
+21. Maintain authentication and privacy.
+22. Eventually support a mobile application.
+
+---
+
+# 4. Core Financial Concepts
+
+The application must distinguish between:
+
+### Income
+
+Money received by the user.
 
 ### Budget
 
-How much money is **allowed/planned** for a category.
+Planned amount allocated for a category or bucket.
 
 ### Transaction
 
-What actually happened with the money.
+Actual financial activity.
 
 ### Account
 
-Where the money physically exists.
-
-### Investment
-
-Money moved into an investment.
+Where money is held.
 
 ### Savings
 
 Money allocated toward a savings goal.
 
+### Investment
+
+Money contributed to an investment.
+
 ### Transfer
 
 Money moved between accounts.
 
-These should not be treated as the same thing.
-
-For example:
-
-```text
-Salary
-  ↓
-Income Transaction
-  ↓
-Monthly Budget
-  ├── Food ₹5,000
-  ├── Transport ₹4,000
-  ├── Investment ₹10,000
-  └── Savings ₹7,500
-```
-
-Actual spending then consumes the budget:
-
-```text
-Food Budget = ₹5,000
-
-Restaurant = ₹500
-Groceries  = ₹1,500
-Snacks     = ₹300
-
-Spent      = ₹2,300
-Remaining  = ₹2,700
-```
+A transfer must not be counted as income or expense.
 
 ---
 
-# 3. Database Tables
+# 5. Application Modules
 
-## 3.1 `users`
+```text
+Personal Finance System
+│
+├── Authentication
+├── Dashboard
+├── Income
+├── Transactions
+├── Categories
+├── Accounts
+├── Budget & Salary Allocation
+├── Fixed Expenses
+├── Recurring Transactions
+├── Savings
+├── Investments
+├── EMI / Loans
+├── Financial Goals
+├── Reports
+├── Analytics
+├── Notifications
+├── Export
+└── Settings
+```
 
-Stores application users.
+# 6. Authentication
 
-Even though the application is initially for one user, authentication should be designed around a user table.
+The application requires login.
+Although initially intended for one user, the database should support a user entity.
 
-| Column        | Type         | Conditions       |
-| ------------- | ------------ | ---------------- |
-| id            | UUID         | PK               |
-| name          | VARCHAR(100) | NOT NULL         |
-| email         | VARCHAR(255) | NOT NULL, UNIQUE |
-| password_hash | TEXT         | NOT NULL         |
-| is_active     | BOOLEAN      | DEFAULT TRUE     |
-| created_at    | TIMESTAMP    | NOT NULL         |
-| updated_at    | TIMESTAMP    | NOT NULL         |
+### Features
 
----
+- Register
+- Login
+- JWT authentication
+- Protected API routes
+- Refresh token
+- Logout
+- Current user information
 
-# 3.2 `accounts`
+All financial records must belong to a user.
 
-Represents where money is held.
+# 7. Dashboard
+
+The dashboard is the primary application screen.
+
+### Summary Cards
+
+- Total Income
+- Total Expenses
+- Total Savings
+- Total Investments
+- Available Money
+- Net Worth
+- Current Month Budget
+- Budget Usage
+
+### Charts
+
+#### Income vs Expense
+
+Monthly comparison of income and expenses.
+
+#### Expense Breakdown
+
+Category-based spending.
+
+#### Budget Utilization
+
+Shows allocated amount, spent amount, remaining amount, and usage percentage.
+
+#### Income Source Breakdown
+
+Shows income distribution by source.
+
+#### Savings Trend
+
+Monthly savings contributions.
+
+#### Investment Trend
+
+Monthly investment contributions.
+
+#### Net Worth Trend
+
+Historical net worth.
+
+#### Fixed vs Variable Expenses
+
+Comparison between fixed and variable spending.
+
+#### Financial Goal Progress
+
+Progress toward savings and financial goals.
+
+# 8. Income Management
+
+The system supports multiple income sources.
 
 Examples:
 
-* HDFC Salary Account
-* SBI Savings
-* Cash
+- Salary
+- Freelancing
+- Interest
+- Other
 
-| Column          | Type          | Conditions    |
-| --------------- | ------------- | ------------- |
-| id              | UUID          | PK            |
-| user_id         | UUID          | FK → users.id |
-| name            | VARCHAR(100)  | NOT NULL      |
-| account_type    | VARCHAR       | NOT NULL      |
-| opening_balance | NUMERIC(15,2) | DEFAULT 0     |
-| is_active       | BOOLEAN       | DEFAULT TRUE  |
-| created_at      | TIMESTAMP     | NOT NULL      |
-| updated_at      | TIMESTAMP     | NOT NULL      |
+Each income transaction contains:
 
-### `account_type`
+- Amount
+- Income source
+- Date
+- Account
+- Description
+- Recurring status
+- Notes
 
-Recommended values:
+Salary is treated specially because it can trigger the salary allocation workflow.
 
-```text
-BANK
-CASH
-OTHER
-```
+# 9. Salary Allocation
 
-### Conditions
-
-* Account belongs to a user.
-* Account cannot be physically deleted if transactions exist.
-* Use `is_active = false` instead.
-
----
-
-# 3.3 `income_sources`
-
-Defines where income comes from.
-
-Examples:
-
-```text
-Salary
-Freelancing
-Interest
-Other
-```
-
-| Column     | Type         | Conditions    |
-| ---------- | ------------ | ------------- |
-| id         | UUID         | PK            |
-| user_id    | UUID         | FK            |
-| name       | VARCHAR(100) | NOT NULL      |
-| is_salary  | BOOLEAN      | DEFAULT FALSE |
-| is_active  | BOOLEAN      | DEFAULT TRUE  |
-| created_at | TIMESTAMP    | NOT NULL      |
-| updated_at | TIMESTAMP    | NOT NULL      |
-
-Only one source needs to be marked as the primary salary source initially, but the schema can support multiple salary sources.
-
----
-
-# 3.4 `income_transactions`
-
-Records actual income received.
-
-| Column                   | Type          | Conditions    |
-| ------------------------ | ------------- | ------------- |
-| id                       | UUID          | PK            |
-| user_id                  | UUID          | FK            |
-| income_source_id         | UUID          | FK            |
-| account_id               | UUID          | FK            |
-| amount                   | NUMERIC(15,2) | NOT NULL, > 0 |
-| received_date            | DATE          | NOT NULL      |
-| description              | TEXT          | NULL          |
-| is_recurring             | BOOLEAN       | DEFAULT FALSE |
-| recurring_transaction_id | UUID          | NULL          |
-| notes                    | TEXT          | NULL          |
-| created_at               | TIMESTAMP     | NOT NULL      |
-| updated_at               | TIMESTAMP     | NOT NULL      |
-
-### Conditions
-
-* `amount > 0`
-* Income source must belong to the same user.
-* Account must belong to the same user.
-* Salary income can trigger salary allocation.
-
----
-
-# 3.5 `categories`
-
-Main expense/income categories.
-
-Examples:
-
-```text
-Food
-Transport
-Shopping
-Entertainment
-Bills
-Investment
-Savings
-```
-
-| Column        | Type         | Conditions   |
-| ------------- | ------------ | ------------ |
-| id            | UUID         | PK           |
-| user_id       | UUID         | FK           |
-| name          | VARCHAR(100) | NOT NULL     |
-| category_type | VARCHAR(30)  | NOT NULL     |
-| description   | TEXT         | NULL         |
-| is_active     | BOOLEAN      | DEFAULT TRUE |
-| created_at    | TIMESTAMP    | NOT NULL     |
-| updated_at    | TIMESTAMP    | NOT NULL     |
-
-### `category_type`
-
-```text
-EXPENSE
-INCOME
-SAVING
-INVESTMENT
-```
-
-For v1, most transaction categories will be `EXPENSE`.
-
-### Conditions
-
-```text
-UNIQUE(user_id, name, category_type)
-```
-
-Use soft deletion.
-
----
-
-# 3.6 `subcategories`
-
-Child categories.
+The user can create customizable salary allocation templates.
 
 Example:
 
-```text
+Salary = ₹50,000
+
+Fixed Expenses    30%
+Investments       20%
+Savings           15%
+Food              10%
+Transport          8%
+Personal           7%
+Entertainment      5%
+Emergency          5%
+
+Total allocation must equal 100%.
+
+### Salary Allocation Requirements
+
+- Percentage based.
+- Categories can be added.
+- Categories can be edited.
+- Categories can be removed.
+- Percentages can be changed.
+- Templates can be created.
+- Templates can be activated/deactivated.
+- Active templates must total exactly 100%.
+- A template can be selected when creating a monthly budget.
+- The system calculates the allocated amount automatically.
+
+# 10. Monthly Budget
+
+Workflow:
+
+Salary Received
+       ↓
+Select Budget Template
+       ↓
+Validate Allocation
+       ↓
+Calculate Amounts
+       ↓
+Create Monthly Budget
+       ↓
+Track Actual Spending
+
+Example:
+
+Salary = ₹50,000
+
+Food          ₹5,000
+Transport     ₹4,000
+Investment   ₹10,000
+Savings       ₹7,500
+# 11. Budget Tracking
+
+The system compares planned allocations with actual spending.
+
+Example:
+
+Food
+
+Budget:     ₹5,000
+Spent:      ₹4,250
+Remaining:  ₹750
+Used:       85%
+### Budget Warning
+
+At 80% usage:
+
+WARNING
+
+At 100% or above:
+
+EXCEEDED
+
+The system must never block a transaction because a budget was exceeded.
+
+Example:
+
+Budget:    ₹5,000
+Spent:     ₹5,800
+Exceeded:  ₹800
+# 12. Categories
+
+Category hierarchy:
+
+Category
+    ↓
+Subcategory
+    ↓
+Transaction
+
+Example:
+
 Food
 ├── Groceries
 ├── Restaurant
 ├── Snacks
 └── Delivery
-```
 
-| Column      | Type         | Conditions   |
-| ----------- | ------------ | ------------ |
-| id          | UUID         | PK           |
-| category_id | UUID         | FK           |
-| name        | VARCHAR(100) | NOT NULL     |
-| description | TEXT         | NULL         |
-| is_active   | BOOLEAN      | DEFAULT TRUE |
-| created_at  | TIMESTAMP    | NOT NULL     |
-| updated_at  | TIMESTAMP    | NOT NULL     |
+Transport
+├── Petrol
+├── Bus
+├── Train
+└── Cab
 
-### Conditions
+Categories and subcategories support:
 
-```text
-UNIQUE(category_id, name)
-```
+- Create
+- Read
+- Update
+- Delete/deactivate
 
-A subcategory cannot exist without a parent category.
+Historical categories should use soft deletion rather than physical deletion when transactions depend on them.
 
----
+# 13. Transactions
 
-# 3.7 `transactions`
+Transaction fields:
 
-Main table for actual spending and financial movements.
+- Amount
+- Type
+- Category
+- Subcategory
+- Date
+- Account
+- Description
+- Payment Method
+- Recurring
+- Notes
 
-| Column                   | Type          | Conditions    |
-| ------------------------ | ------------- | ------------- |
-| id                       | UUID          | PK            |
-| user_id                  | UUID          | FK            |
-| transaction_type         | VARCHAR(30)   | NOT NULL      |
-| amount                   | NUMERIC(15,2) | NOT NULL, > 0 |
-| category_id              | UUID          | NULL          |
-| subcategory_id           | UUID          | NULL          |
-| account_id               | UUID          | FK            |
-| transaction_date         | DATE          | NOT NULL      |
-| payment_method           | VARCHAR(30)   | NULL          |
-| description              | TEXT          | NULL          |
-| recurring_transaction_id | UUID          | NULL          |
-| notes                    | TEXT          | NULL          |
-| created_at               | TIMESTAMP     | NOT NULL      |
-| updated_at               | TIMESTAMP     | NOT NULL      |
+Transaction types:
 
-### `transaction_type`
+- Expense
+- Transfer
+- Saving
+- Investment
+- Loan Payment
 
-```text
-EXPENSE
-TRANSFER
-SAVING
-INVESTMENT
-LOAN_PAYMENT
-```
+Income is stored separately.
 
-Income is kept in `income_transactions`.
+# 14. Fixed Expenses
 
-### `payment_method`
-
-```text
-CASH
-UPI
-DEBIT_CARD
-BANK_TRANSFER
-OTHER
-```
-
-### Conditions
-
-* `amount > 0`
-* Expense should have a category.
-* Expense should normally have a subcategory.
-* Account must belong to the user.
-* Category must belong to the user.
-* Subcategory must belong to the selected category.
-
----
-
-# 3.8 `budget_templates`
-
-Defines reusable salary allocation templates.
-
-Example:
-
-```text
-Normal Salary Budget
-```
-
-| Column      | Type         | Conditions   |
-| ----------- | ------------ | ------------ |
-| id          | UUID         | PK           |
-| user_id     | UUID         | FK           |
-| name        | VARCHAR(100) | NOT NULL     |
-| description | TEXT         | NULL         |
-| is_active   | BOOLEAN      | DEFAULT TRUE |
-| created_at  | TIMESTAMP    | NOT NULL     |
-| updated_at  | TIMESTAMP    | NOT NULL     |
-
----
-
-# 3.9 `budget_template_items`
-
-Defines the percentage allocation.
-
-Example:
-
-```text
-Normal Salary Budget
-
-Fixed Expenses → 30%
-Investment      → 20%
-Savings         → 15%
-Food            → 10%
-Transport       → 8%
-Personal        → 7%
-Entertainment   → 5%
-Emergency       → 5%
-```
-
-| Column             | Type         | Conditions  |
-| ------------------ | ------------ | ----------- |
-| id                 | UUID         | PK          |
-| budget_template_id | UUID         | FK          |
-| category_id        | UUID         | FK          |
-| percentage         | NUMERIC(5,2) | > 0, <= 100 |
-| created_at         | TIMESTAMP    | NOT NULL    |
-| updated_at         | TIMESTAMP    | NOT NULL    |
-
-### Important condition
-
-For an active template:
-
-```text
-SUM(percentage) = 100
-```
-
-The API must reject activation if the total is not 100%.
-
----
-
-# 3.10 `monthly_budgets`
-
-Represents the actual budget generated for a particular month.
-
-Example:
-
-```text
-September 2026
-Salary = ₹50,000
-```
-
-| Column                | Type          | Conditions |
-| --------------------- | ------------- | ---------- |
-| id                    | UUID          | PK         |
-| user_id               | UUID          | FK         |
-| budget_template_id    | UUID          | FK         |
-| income_transaction_id | UUID          | FK         |
-| month                 | INTEGER       | 1-12       |
-| year                  | INTEGER       | Valid year |
-| allocated_amount      | NUMERIC(15,2) | > 0        |
-| created_at            | TIMESTAMP     | NOT NULL   |
-| updated_at            | TIMESTAMP     | NOT NULL   |
-
-### Conditions
-
-```text
-UNIQUE(user_id, month, year)
-```
-
-Only one primary monthly budget per month.
-
----
-
-# 3.11 `monthly_budget_items`
-
-Actual bucket allocations for the month.
-
-| Column            | Type          | Conditions |
-| ----------------- | ------------- | ---------- |
-| id                | UUID          | PK         |
-| monthly_budget_id | UUID          | FK         |
-| category_id       | UUID          | FK         |
-| allocated_amount  | NUMERIC(15,2) | >= 0       |
-| spent_amount      | NUMERIC(15,2) | DEFAULT 0  |
-| percentage        | NUMERIC(5,2)  | >= 0       |
-| created_at        | TIMESTAMP     | NOT NULL   |
-| updated_at        | TIMESTAMP     | NOT NULL   |
-
-### Derived values
-
-```text
-remaining =
-allocated_amount - spent_amount
-```
-
-```text
-usage_percentage =
-spent_amount / allocated_amount × 100
-```
-
-### Important
-
-`spent_amount` can exceed `allocated_amount`.
-
-Example:
-
-```text
-Budget = ₹5,000
-Spent  = ₹5,800
-
-Exceeded = ₹800
-```
-
-The system warns but does not block the transaction.
-
----
-
-# 3.12 `fixed_expenses`
-
-Stores recurring/fixed financial commitments.
+Dedicated fixed-expense management.
 
 Examples:
 
-* Rent
-* Internet
-* EMI
-* Insurance
-* Subscription
+- Rent
+- Internet
+- Insurance
+- EMI
+- Subscription
+- Other recurring bills
 
-| Column         | Type          | Conditions   |
-| -------------- | ------------- | ------------ |
-| id             | UUID          | PK           |
-| user_id        | UUID          | FK           |
-| name           | VARCHAR(150)  | NOT NULL     |
-| amount         | NUMERIC(15,2) | > 0          |
-| category_id    | UUID          | FK           |
-| subcategory_id | UUID          | FK           |
-| account_id     | UUID          | FK           |
-| frequency      | VARCHAR(30)   | NOT NULL     |
-| next_due_date  | DATE          | NOT NULL     |
-| start_date     | DATE          | NOT NULL     |
-| end_date       | DATE          | NULL         |
-| auto_generate  | BOOLEAN       | DEFAULT TRUE |
-| is_active      | BOOLEAN       | DEFAULT TRUE |
-| description    | TEXT          | NULL         |
-| created_at     | TIMESTAMP     | NOT NULL     |
-| updated_at     | TIMESTAMP     | NOT NULL     |
+Each fixed expense supports:
 
-### `frequency`
+- Name
+- Amount
+- Category
+- Subcategory
+- Account
+- Frequency
+- Due date
+- Start date
+- End date
+- Auto generation
+- Active/inactive status
 
-```text
-WEEKLY
-MONTHLY
-YEARLY
-```
+Initial frequencies:
 
-Can later support custom recurrence.
+- Weekly
+- Monthly
+- Yearly
 
----
+# 15. Recurring Transactions
 
-# 3.13 `recurring_transactions`
-
-Generic recurring transaction configuration.
-
-This can support recurring income and expenses.
-
-| Column           | Type          | Conditions   |
-| ---------------- | ------------- | ------------ |
-| id               | UUID          | PK           |
-| user_id          | UUID          | FK           |
-| name             | VARCHAR(150)  | NOT NULL     |
-| transaction_type | VARCHAR(30)   | NOT NULL     |
-| amount           | NUMERIC(15,2) | > 0          |
-| category_id      | UUID          | NULL         |
-| subcategory_id   | UUID          | NULL         |
-| account_id       | UUID          | FK           |
-| payment_method   | VARCHAR(30)   | NULL         |
-| frequency        | VARCHAR(30)   | NOT NULL     |
-| start_date       | DATE          | NOT NULL     |
-| end_date         | DATE          | NULL         |
-| next_run_date    | DATE          | NOT NULL     |
-| is_active        | BOOLEAN       | DEFAULT TRUE |
-| notes            | TEXT          | NULL         |
-| created_at       | TIMESTAMP     | NOT NULL     |
-| updated_at       | TIMESTAMP     | NOT NULL     |
-
----
-
-# 3.14 `savings_goals`
-
-Tracks savings targets.
+Recurring transactions should generate planned transactions automatically.
 
 Examples:
 
-```text
+Salary       → Monthly
+Rent         → Monthly
+Internet     → Monthly
+SIP          → Monthly
+Insurance    → Yearly
+
+The system distinguishes:
+
+Planned Transaction
+        vs
+Actual Transaction
+
+The user should be able to confirm a planned transaction as an actual transaction.
+
+# 16. Savings
+
+Savings support:
+
+- Emergency Fund
+- General Savings
+- Savings Goals
+- FD
+- RD
+- Bank balance
+# 17. Savings Goals
+
+Examples:
+Examples:
+
 Emergency Fund
-New PC
-Bike
-Vacation
-```
-
-| Column         | Type          | Conditions |
-| -------------- | ------------- | ---------- |
-| id             | UUID          | PK         |
-| user_id        | UUID          | FK         |
-| name           | VARCHAR(150)  | NOT NULL   |
-| target_amount  | NUMERIC(15,2) | > 0        |
-| current_amount | NUMERIC(15,2) | DEFAULT 0  |
-| target_date    | DATE          | NULL       |
-| description    | TEXT          | NULL       |
-| status         | VARCHAR(30)   | NOT NULL   |
-| created_at     | TIMESTAMP     | NOT NULL   |
-| updated_at     | TIMESTAMP     | NOT NULL   |
-
-### `status`
 
 ```text
-ACTIVE
-COMPLETED
-PAUSED
-CANCELLED
+Target:      ₹2,00,000
+Current:     ₹75,000
+Remaining:   ₹1,25,000
+Progress:    37.5%
 ```
 
----
+Each savings goal supports:
 
-# 3.15 `savings_contributions`
+- Name
+- Target amount
+- Current amount
+- Target date
+- Description
+- Status
+- Contributions
 
-Tracks money added to savings goals.
+Statuses:
 
-| Column            | Type          | Conditions |
-| ----------------- | ------------- | ---------- |
-| id                | UUID          | PK         |
-| savings_goal_id   | UUID          | FK         |
-| account_id        | UUID          | FK         |
-| amount            | NUMERIC(15,2) | > 0        |
-| contribution_date | DATE          | NOT NULL   |
-| transaction_id    | UUID          | FK         |
-| notes             | TEXT          | NULL       |
-| created_at        | TIMESTAMP     | NOT NULL   |
+- Active
+- Completed
+- Paused
+- Cancelled
 
----
+# 18. Investments
 
-# 3.16 `investments`
+Investment types:
 
-Investment categories.
+- Mutual Fund
+- Gold
+- FD
+- RD
+- Other
+
+The initial system tracks investment contributions only.
+
+It does not require:
+
+- Live NAV
+- Market prices
+- Portfolio APIs
+- Current market value
+
+Investment contribution fields:
+
+- Investment type
+- Amount
+- Date
+- Account
+- Notes
+
+# 19. EMI / Loans
+
+Dedicated EMI/loan module.
+
+Each loan tracks:
+
+- Name
+- Principal amount
+- Interest rate
+- EMI amount
+- Tenure
+- Start date
+- End date
+- Status
+
+Statuses:
+
+- Active
+- Completed
+- Cancelled
+
+EMI payments are tracked separately.
+
+# 20. Financial Goals
+
+Financial goals are broader financial targets.
 
 Examples:
 
-```text
-Mutual Fund
-Gold
-FD
-```
+- Buy a PC
+- Buy a bike
+- Buy a car
+- Buy a house
+- Vacation
+- Emergency reserve
 
-| Column          | Type         | Conditions   |
-| --------------- | ------------ | ------------ |
-| id              | UUID         | PK           |
-| user_id         | UUID         | FK           |
-| name            | VARCHAR(150) | NOT NULL     |
-| investment_type | VARCHAR(30)  | NOT NULL     |
-| description     | TEXT         | NULL         |
-| is_active       | BOOLEAN      | DEFAULT TRUE |
-| created_at      | TIMESTAMP    | NOT NULL     |
-| updated_at      | TIMESTAMP    | NOT NULL     |
+Each goal supports:
 
-### `investment_type`
+- Name
+- Target amount
+- Current amount
+- Target date
+- Status
+- Contributions
+- Description
 
-```text
-MUTUAL_FUND
-GOLD
-FD
-OTHER
-```
+# 21. Accounts
 
----
+Basic account tracking is supported.
 
-# 3.17 `investment_contributions`
+Examples:
 
-Tracks money invested.
+- HDFC Salary Account
+- SBI Savings
+- Cash
 
-| Column          | Type          | Conditions |
-| --------------- | ------------- | ---------- |
-| id              | UUID          | PK         |
-| investment_id   | UUID          | FK         |
-| account_id      | UUID          | FK         |
-| amount          | NUMERIC(15,2) | > 0        |
-| investment_date | DATE          | NOT NULL   |
-| transaction_id  | UUID          | FK         |
-| notes           | TEXT          | NULL       |
-| created_at      | TIMESTAMP     | NOT NULL   |
+No bank API integration is required for v1.
 
-This intentionally tracks **contributions**, not current market value.
+Account types:
 
----
+- Bank
+- Cash
+- Other
 
-# 3.18 `loans`
+Accounts track:
 
-Dedicated EMI/loan tracking.
+- Name
+- Opening balance
+- Current balance
+- Active status
 
-| Column           | Type          | Conditions |
-| ---------------- | ------------- | ---------- |
-| id               | UUID          | PK         |
-| user_id          | UUID          | FK         |
-| name             | VARCHAR(150)  | NOT NULL   |
-| principal_amount | NUMERIC(15,2) | > 0        |
-| interest_rate    | NUMERIC(5,2)  | >= 0       |
-| emi_amount       | NUMERIC(15,2) | > 0        |
-| tenure_months    | INTEGER       | > 0        |
-| start_date       | DATE          | NOT NULL   |
-| end_date         | DATE          | NULL       |
-| status           | VARCHAR(30)   | NOT NULL   |
-| description      | TEXT          | NULL       |
-| created_at       | TIMESTAMP     | NOT NULL   |
-| updated_at       | TIMESTAMP     | NOT NULL   |
+# 22. Money Transfers
 
-### `status`
-
-```text
-ACTIVE
-COMPLETED
-CANCELLED
-```
-
----
-
-# 3.19 `loan_payments`
-
-Tracks EMI payments.
-
-| Column         | Type          | Conditions |
-| -------------- | ------------- | ---------- |
-| id             | UUID          | PK         |
-| loan_id        | UUID          | FK         |
-| account_id     | UUID          | FK         |
-| transaction_id | UUID          | FK         |
-| amount         | NUMERIC(15,2) | > 0        |
-| payment_date   | DATE          | NOT NULL   |
-| notes          | TEXT          | NULL       |
-| created_at     | TIMESTAMP     | NOT NULL   |
-
----
-
-# 3.20 `financial_goals`
-
-General financial goals separate from savings goals.
+Transfers between accounts must not count as income or expenses.
 
 Example:
 
-```text
-Buy a car
-Buy a house
-Build emergency reserve
-Travel
-```
+HDFC
+₹50,000
 
-| Column         | Type          | Conditions |
-| -------------- | ------------- | ---------- |
-| id             | UUID          | PK         |
-| user_id        | UUID          | FK         |
-| name           | VARCHAR(150)  | NOT NULL   |
-| target_amount  | NUMERIC(15,2) | > 0        |
-| target_date    | DATE          | NULL       |
-| current_amount | NUMERIC(15,2) | DEFAULT 0  |
-| status         | VARCHAR(30)   | NOT NULL   |
-| description    | TEXT          | NULL       |
-| created_at     | TIMESTAMP     | NOT NULL   |
-| updated_at     | TIMESTAMP     | NOT NULL   |
+      ↓ ₹10,000
 
----
+SBI
+₹10,000
 
-# 3.21 `financial_goal_contributions`
+The user's overall financial position does not change.
 
-| Column            | Type          | Conditions |
-| ----------------- | ------------- | ---------- |
-| id                | UUID          | PK         |
-| financial_goal_id | UUID          | FK         |
-| amount            | NUMERIC(15,2) | > 0        |
-| contribution_date | DATE          | NOT NULL   |
-| transaction_id    | UUID          | NULL       |
-| notes             | TEXT          | NULL       |
-| created_at        | TIMESTAMP     | NOT NULL   |
+# 23. Net Worth
 
----
+Formula:
 
-# 3.22 `notifications`
+`Net Worth = Assets - Liabilities`
 
-Stores in-app notifications.
+### Assets
 
-| Column            | Type         | Conditions    |
-| ----------------- | ------------ | ------------- |
-| id                | UUID         | PK            |
-| user_id           | UUID         | FK            |
-| title             | VARCHAR(200) | NOT NULL      |
-| message           | TEXT         | NOT NULL      |
-| notification_type | VARCHAR(50)  | NOT NULL      |
-| reference_id      | UUID         | NULL          |
-| is_read           | BOOLEAN      | DEFAULT FALSE |
-| created_at        | TIMESTAMP    | NOT NULL      |
+- Bank balances
+- Cash
+- Savings
+- FD
+- RD
+- Investment contributions
+- Gold
 
-### Examples
+### Liabilities
 
-```text
-BUDGET_WARNING
-BUDGET_EXCEEDED
-BILL_DUE
-GOAL_COMPLETED
-EMI_DUE
-```
+- Remaining loans
+- Remaining EMI balances
 
----
+The application should provide historical net-worth data.
 
-# 4. Database Relationships
+Because live investment valuation is not implemented in v1, investment figures should be clearly treated as contribution/book values rather than current market values.
 
-The major relationships are:
+# 24. Reports
 
-```text
-users
- │
- ├── accounts
- │
- ├── income_sources
- │       └── income_transactions
- │
- ├── categories
- │       └── subcategories
- │
- ├── transactions
- │
- ├── budget_templates
- │       └── budget_template_items
- │
- ├── monthly_budgets
- │       └── monthly_budget_items
- │
- ├── fixed_expenses
- │
- ├── recurring_transactions
- │
- ├── savings_goals
- │       └── savings_contributions
- │
- ├── investments
- │       └── investment_contributions
- │
- ├── loans
- │       └── loan_payments
- │
- ├── financial_goals
- │       └── financial_goal_contributions
- │
- └── notifications
-```
+## Monthly Report
 
----
+Contains:
 
-# 5. REST API
+- Total income
+- Total expenses
+- Savings
+- Investments
+- Fixed expenses
+- Variable expenses
+- Budget performance
+- Category breakdown
+- Net worth
+- Financial goals
+- EMI payments
 
-Base URL:
+## Yearly Report
 
-```text
-/api/v1
-```
+Contains:
 
-Authentication:
+- Total yearly income
+- Total yearly expenses
+- Total savings
+- Total investments
+- Category spending
+- Monthly cash flow
+- Net worth progression
+- Budget performance
 
-```text
-Authorization: Bearer <JWT>
-```
+# 25. Advanced Analytics
 
----
+The application should provide:
 
-# 6. Authentication APIs
+## Spending Trends
 
-## POST `/auth/register`
+Analyze spending changes over time.
 
-Create a user account.
+## Category Trends
 
-### Request
+Compare category spending across months.
 
-```json
-{
-  "name": "Akash",
-  "email": "user@example.com",
-  "password": "password"
-}
-```
+## Budget Performance
 
----
+Compare:
 
-## POST `/auth/login`
+Planned
 
-Authenticate user.
-
-Returns:
-
-```json
-{
-  "accessToken": "...",
-  "user": {}
-}
-```
-
----
-
-## POST `/auth/refresh`
-
-Refresh access token.
-
----
-
-## GET `/auth/me`
-
-Returns authenticated user information.
-
----
-
-## POST `/auth/logout`
-
-Invalidate/logout the current session if refresh-token/session management is implemented.
-
----
-
-# 7. Account APIs
-
-## GET `/accounts`
-
-Get all accounts.
-
-## GET `/accounts/:id`
-
-Get account details and balance.
-
-## POST `/accounts`
-
-Create an account.
-
-## PATCH `/accounts/:id`
-
-Update an account.
-
-## DELETE `/accounts/:id`
-
-Deactivate an account.
-
----
-
-# 8. Income Source APIs
-
-## GET `/income-sources`
-
-List income sources.
-
-## POST `/income-sources`
-
-Create income source.
-
-## GET `/income-sources/:id`
-
-Get income source.
-
-## PATCH `/income-sources/:id`
-
-Update income source.
-
-## DELETE `/income-sources/:id`
-
-Deactivate income source.
-
----
-
-# 9. Income APIs
-
-## GET `/income`
-
-List income transactions.
-
-Supported filters:
-
-```text
-from
-to
-incomeSource
-account
-isSalary
-page
-limit
-```
-
-## GET `/income/:id`
-
-Get income transaction.
-
-## POST `/income`
-
-Record income.
-
-## PATCH `/income/:id`
-
-Update income.
-
-## DELETE `/income/:id`
-
-Delete income transaction.
-
----
-
-# 10. Category APIs
-
-## GET `/categories`
-
-List categories.
-
-Optional:
-
-```text
-type=EXPENSE
-includeInactive=false
-```
-
-## POST `/categories`
-
-Create category.
-
-## GET `/categories/:id`
-
-Get category with subcategories.
-
-## PATCH `/categories/:id`
-
-Update category.
-
-## DELETE `/categories/:id`
-
-Deactivate category.
-
----
-
-# 11. Subcategory APIs
-
-## GET `/categories/:categoryId/subcategories`
-
-List subcategories.
-
-## POST `/categories/:categoryId/subcategories`
-
-Create subcategory.
-
-## GET `/subcategories/:id`
-
-Get subcategory.
-
-## PATCH `/subcategories/:id`
-
-Update subcategory.
-
-## DELETE `/subcategories/:id`
-
-Deactivate subcategory.
-
----
-
-# 12. Transaction APIs
-
-## GET `/transactions`
-
-List transactions.
-
-Filters:
-
-```text
-from
-to
-type
-category
-subcategory
-account
-paymentMethod
-page
-limit
-sort
-```
-
-## GET `/transactions/:id`
-
-Get transaction.
-
-## POST `/transactions`
-
-Create transaction.
-
-## PATCH `/transactions/:id`
-
-Update transaction.
-
-## DELETE `/transactions/:id`
-
-Delete transaction.
-
----
-
-# 13. Budget Template APIs
-
-## GET `/budget-templates`
-
-List budget templates.
-
-## POST `/budget-templates`
-
-Create budget template.
-
-## GET `/budget-templates/:id`
-
-Get template with allocation items.
-
-## PATCH `/budget-templates/:id`
-
-Update template.
-
-## DELETE `/budget-templates/:id`
-
-Deactivate template.
-
----
-
-# 14. Budget Template Item APIs
-
-## POST `/budget-templates/:id/items`
-
-Add allocation category.
-
-Example:
-
-```json
-{
-  "categoryId": "uuid",
-  "percentage": 20
-}
-```
-
-## PATCH `/budget-templates/:id/items/:itemId`
-
-Update allocation percentage.
-
-## DELETE `/budget-templates/:id/items/:itemId`
-
-Remove allocation.
-
-## POST `/budget-templates/:id/validate`
-
-Validate that allocation equals 100%.
-
-Response:
-
-```json
-{
-  "valid": true,
-  "totalPercentage": 100
-}
-```
-
----
-
-# 15. Monthly Budget APIs
-
-## GET `/budgets`
-
-List monthly budgets.
-
-Filters:
-
-```text
-year
-month
-```
-
-## GET `/budgets/:id`
-
-Get complete monthly budget.
-
-## POST `/budgets/generate`
-
-Generate monthly budget from salary and template.
-
-### Request
-
-```json
-{
-  "incomeTransactionId": "uuid",
-  "budgetTemplateId": "uuid"
-}
-```
-
-The server calculates every allocation.
-
----
-
-## GET `/budgets/:id/summary`
-
-Returns:
-
-```json
-{
-  "allocated": 50000,
-  "spent": 27500,
-  "remaining": 22500,
-  "percentageUsed": 55
-}
-```
-
----
-
-## GET `/budgets/:id/items`
-
-Returns all budget buckets.
-
----
-
-## GET `/budgets/:id/items/:itemId`
-
-Returns one budget bucket.
-
----
-
-# 16. Fixed Expense APIs
-
-## GET `/fixed-expenses`
-
-List fixed expenses.
-
-## POST `/fixed-expenses`
-
-Create fixed expense.
-
-## GET `/fixed-expenses/:id`
-
-Get fixed expense.
-
-## PATCH `/fixed-expenses/:id`
-
-Update fixed expense.
-
-## DELETE `/fixed-expenses/:id`
-
-Deactivate fixed expense.
-
-## POST `/fixed-expenses/:id/generate`
-
-Generate the next planned transaction.
-
----
-
-# 17. Recurring Transaction APIs
-
-## GET `/recurring-transactions`
-
-List recurring transactions.
-
-## POST `/recurring-transactions`
-
-Create recurring rule.
-
-## GET `/recurring-transactions/:id`
-
-Get recurring rule.
-
-## PATCH `/recurring-transactions/:id`
-
-Update recurring rule.
-
-## DELETE `/recurring-transactions/:id`
-
-Deactivate recurring rule.
-
-## POST `/recurring-transactions/:id/generate`
-
-Generate the next transaction.
-
----
-
-# 18. Savings Goal APIs
-
-## GET `/savings-goals`
-
-List savings goals.
-
-## POST `/savings-goals`
-
-Create savings goal.
-
-## GET `/savings-goals/:id`
-
-Get goal details.
-
-## PATCH `/savings-goals/:id`
-
-Update goal.
-
-## DELETE `/savings-goals/:id`
-
-Delete/deactivate goal.
-
-## GET `/savings-goals/:id/contributions`
-
-List contributions.
-
-## POST `/savings-goals/:id/contributions`
-
-Add contribution.
-
-## DELETE `/savings-goals/:id/contributions/:contributionId`
-
-Remove contribution.
-
----
-
-# 19. Investment APIs
-
-## GET `/investments`
-
-List investments.
-
-## POST `/investments`
-
-Create investment type.
-
-## GET `/investments/:id`
-
-Get investment.
-
-## PATCH `/investments/:id`
-
-Update investment.
-
-## DELETE `/investments/:id`
-
-Deactivate investment.
-
-## GET `/investments/:id/contributions`
-
-List contributions.
-
-## POST `/investments/:id/contributions`
-
-Record investment contribution.
-
-## DELETE `/investments/:id/contributions/:contributionId`
-
-Delete contribution.
-
----
-
-# 20. Loan / EMI APIs
-
-## GET `/loans`
-
-List loans.
-
-## POST `/loans`
-
-Create loan.
-
-## GET `/loans/:id`
-
-Get loan details.
-
-## PATCH `/loans/:id`
-
-Update loan.
-
-## DELETE `/loans/:id`
-
-Deactivate loan.
-
-## GET `/loans/:id/payments`
-
-List EMI payments.
-
-## POST `/loans/:id/payments`
-
-Record EMI payment.
-
-## DELETE `/loans/:id/payments/:paymentId`
-
-Delete payment.
-
----
-
-# 21. Financial Goal APIs
-
-## GET `/financial-goals`
-
-List goals.
-
-## POST `/financial-goals`
-
-Create financial goal.
-
-## GET `/financial-goals/:id`
-
-Get goal.
-
-## PATCH `/financial-goals/:id`
-
-Update goal.
-
-## DELETE `/financial-goals/:id`
-
-Deactivate goal.
-
-## GET `/financial-goals/:id/contributions`
-
-List contributions.
-
-## POST `/financial-goals/:id/contributions`
-
-Add contribution.
-
----
-
-# 22. Dashboard APIs
-
-The dashboard should not require the frontend to make 15 different API calls.
-
-Create dedicated aggregation endpoints.
-
-## GET `/dashboard`
-
-Returns the main dashboard.
-
-Example:
-
-```json
-{
-  "income": 50000,
-  "expenses": 27500,
-  "savings": 7500,
-  "investments": 10000,
-  "remaining": 5000,
-  "netWorth": 425000
-}
-```
-
----
-
-## GET `/dashboard/cash-flow`
-
-Returns monthly income and expense data.
-
-Parameters:
-
-```text
-from
-to
-```
-
----
-
-## GET `/dashboard/expense-breakdown`
-
-Returns category-wise spending.
-
----
-
-## GET `/dashboard/budget-utilization`
-
-Returns:
-
-```text
-category
-allocated
-spent
-remaining
-percentageUsed
-```
-
----
-
-## GET `/dashboard/income-breakdown`
-
-Income by source.
-
----
-
-## GET `/dashboard/savings`
-
-Savings history.
-
----
-
-## GET `/dashboard/investments`
-
-Investment contribution history.
-
----
-
-## GET `/dashboard/net-worth`
-
-Net-worth history.
-
----
-
-# 23. Reports APIs
-
-## GET `/reports/monthly`
-
-Parameters:
-
-```text
-year
-month
-```
-
-Returns:
-
-* Total income
-* Total expenses
-* Savings
-* Investments
-* Fixed expenses
-* Variable expenses
-* Budget performance
-* Category breakdown
-* Net worth
-
----
-
-## GET `/reports/yearly`
-
-Parameters:
-
-```text
-year
-```
-
-Returns yearly financial summary.
-
----
-
-## GET `/reports/net-worth`
-
-Parameters:
-
-```text
-from
-to
-```
-
-Returns net-worth history.
-
----
-
-## GET `/reports/category`
-
-Parameters:
-
-```text
-from
-to
-category
-```
-
-Returns category analysis.
-
----
-
-## GET `/reports/cash-flow`
-
-Parameters:
-
-```text
-from
-to
-```
-
-Returns:
-
-```text
-Income
-Expenses
-Savings
-Investments
-Net Cash Flow
-```
-
----
-
-# 24. Analytics APIs
-
-## GET `/analytics/spending-trends`
-
-Analyzes spending over time.
-
----
-
-## GET `/analytics/category-trends`
-
-Shows category spending trends.
-
----
-
-## GET `/analytics/budget-performance`
-
-Compares:
-
-```text
-Budget
 vs
+
 Actual
-```
 
----
+## Savings Rate
 
-## GET `/analytics/savings-rate`
+Savings Rate =
+(Savings + Investments) / Income × 100
 
-Calculates savings rate.
+## Fixed Expense Ratio
 
----
+Fixed Expense Ratio =
+Fixed Expenses / Income × 100
 
-## GET `/analytics/fixed-expense-ratio`
+## Discretionary Spending
 
-Calculates fixed expense percentage.
+Discretionary Spending =
+Total Expenses - Fixed Expenses
 
----
+## Income Growth
 
-## GET `/analytics/income-growth`
+Compare income across months and years.
 
-Shows income changes over time.
+## Spending Anomalies
 
----
+Identify unusually high spending compared with historical spending patterns.
 
-## GET `/analytics/spending-anomalies`
+# 26. Notifications
 
-Identifies unusual spending compared with historical patterns.
+Since the application is primarily local, v1 should use in-app notifications.
 
----
+Examples:
 
-# 25. Net Worth APIs
+- Salary received
+- Budget approaching limit
+- Budget exceeded
+- Bill due
+- EMI due
+- Goal completed
 
-## GET `/net-worth`
+Suggested budget thresholds:
 
-Current net worth.
+| Usage | Status |
+| --- | --- |
+| < 80% | Normal |
+| 80%-99% | Warning |
+| >= 100% | Exceeded |
 
-## GET `/net-worth/history`
+# 27. Export
 
-Historical net worth.
+The application should support:
 
-### Formula
+## CSV
 
-```text
-Net Worth =
-Assets - Liabilities
-```
+Export:
 
-Assets:
+- Transactions
+- Income
+- Expenses
+- Budgets
+- Investments
+- Fixed expenses
 
-```text
-Bank balances
-Cash
-Savings
-Investment contributions
-FD
-RD
-Gold
-```
+## Excel
 
-Liabilities:
+Export the same financial data into XLSX.
 
-```text
-Remaining loan/EMI balances
-```
+## PDF
 
----
+Generate:
 
-# 26. Notification APIs
+- Monthly financial report
+- Yearly financial report
 
-## GET `/notifications`
+Reports should contain financial summaries and charts where practical.
 
-List notifications.
+# 28. Settings
 
-## GET `/notifications/unread`
+Settings should include:
 
-List unread notifications.
+- Profile
+- Password
+- Categories
+- Subcategories
+- Accounts
+- Budget templates
+- Notification preferences
+- Theme
+- Dark mode
+- Export preferences
 
-## PATCH `/notifications/:id/read`
+# 29. UI Navigation
 
-Mark notification as read.
-
-## PATCH `/notifications/read-all`
-
-Mark all notifications as read.
-
----
-
-# 27. Export APIs
-
-## GET `/exports/transactions`
-
-Export transactions.
-
-Supported:
-
-```text
-CSV
-XLSX
-```
-
----
-
-## GET `/exports/monthly-report`
-
-Generate monthly PDF report.
-
-Parameters:
+Recommended navigation:
 
 ```text
-year
-month
+Dashboard
+
+Finance
+├── Transactions
+├── Income
+├── Expenses
+└── Accounts
+
+Budget
+├── Salary Allocation
+├── Monthly Budget
+├── Fixed Expenses
+└── Categories
+
+Savings & Investments
+├── Savings
+├── Investments
+└── Goals
+
+Debt
+└── EMI / Loans
+
+Reports
+├── Monthly
+├── Yearly
+├── Net Worth
+└── Analytics
+
+Settings
+├── Profile
+├── Budget Templates
+├── Categories
+├── Accounts
+└── Preferences
 ```
 
----
+# 30. Backend Architecture
 
-## GET `/exports/yearly-report`
+```text
+                    ┌─────────────────────┐
+                    │      Next.js        │
+                    │      Web App        │
+                    └──────────┬──────────┘
+                               │
+                            REST API
+                               │
+                    ┌──────────▼──────────┐
+                    │   Node.js + Express │
+                    │                     │
+                    │ Authentication      │
+                    │ Finance Logic       │
+                    │ Budget Engine       │
+                    │ Reports             │
+                    │ Analytics           │
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │     PostgreSQL      │
+                    └─────────────────────┘
+                               ▲
+                               │
+                    ┌──────────┴──────────┐
+                    │ Future Mobile App   │
+                    │ React Native/Expo   │
+                    └─────────────────────┘
+```
 
-Generate yearly PDF report.
+# 31. Important Financial Rules
+## Money Precision
 
----
+Use PostgreSQL:
 
-# 28. Important Business Rules
+`NUMERIC(15,2)`
 
-## Salary allocation
+Do not use PostgreSQL floating-point types for monetary values.
 
+## Salary Allocation
 ```text
 Salary Received
-        ↓
-Select Budget Template
-        ↓
-Validate allocation = 100%
-        ↓
-Generate Monthly Budget
+       ↓
+Budget Template
+       ↓
+Validate total = 100%
+       ↓
+Create Monthly Budget
 ```
+## Budget Exceeded
 
----
+Budget limits are informational.
 
-## Budget warning
+The application must not block spending.
 
-```text
-Usage < 80%
-    ↓
-Normal
+## Category Deletion
 
-Usage >= 80%
-    ↓
-WARNING
+Use soft deletion for categories and subcategories with historical transactions.
 
-Usage >= 100%
-    ↓
-EXCEEDED
-```
+## Monthly Budget Uniqueness
 
-Transactions are **never blocked** because of budget limits.
+Only one primary monthly budget should exist for a user/month.
 
----
+`UNIQUE(user_id, year, month)`
 
-## Category deletion
+## Transfers
 
-Categories with historical transactions should not be physically deleted.
+Transfers between accounts do not count as:
 
-Instead:
+- Income
+- Expense
+- Savings
+- Investment
 
-```text
-is_active = false
-```
+They only change account balances.
 
----
+# 32. Recommended Development Phases
 
-## Budget calculation
+## Phase 1 — Backend Foundation
 
-```text
-remaining =
-allocated_amount - actual_spending
-```
-
-Can become negative.
-
-Example:
-
-```text
-Allocated = ₹5,000
-Spent     = ₹5,800
-
-Remaining = -₹800
-```
-
----
-
-## Monthly budget
-
-Only one primary monthly budget should exist for a user/month:
-
-```text
-UNIQUE(user_id, year, month)
-```
-
----
-
-## Budget template
-
-An active budget template must satisfy:
-
-```text
-SUM(allocation percentages) = 100%
-```
-
----
-
-## Money transfer
-
-Transfers between accounts must not count as income or expense.
-
-Example:
-
-```text
-HDFC ₹50,000
-     ↓
-SBI ₹10,000
-```
-
-Net financial position:
-
-```text
-₹0 change
-```
-
-Only account distribution changed.
-
----
-
-# 29. API Response Standard
-
-All APIs should use a consistent response structure.
-
-### Success
-
-```json
-{
-  "success": true,
-  "data": {},
-  "message": "Transaction created successfully"
-}
-```
-
-### Error
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Amount must be greater than zero",
-    "details": []
-  }
-}
-```
-
----
-
-# 30. Pagination
-
-List APIs should support:
-
-```text
-?page=1&limit=20
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "data": [],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 125,
-    "totalPages": 7
-  }
-}
-```
-
----
-
-# 31. Recommended API Project Structure
-
-```text
-backend/
-│
-├── src/
-│   ├── config/
-│   │   ├── database.ts
-│   │   ├── env.ts
-│   │   └── swagger.ts
-│   │
-│   ├── middleware/
-│   │   ├── auth.middleware.ts
-│   │   ├── error.middleware.ts
-│   │   └── validation.middleware.ts
-│   │
-│   ├── modules/
-│   │   ├── auth/
-│   │   ├── users/
-│   │   ├── accounts/
-│   │   ├── income/
-│   │   ├── categories/
-│   │   ├── transactions/
-│   │   ├── budgets/
-│   │   ├── fixed-expenses/
-│   │   ├── recurring-transactions/
-│   │   ├── savings/
-│   │   ├── investments/
-│   │   ├── loans/
-│   │   ├── goals/
-│   │   ├── dashboard/
-│   │   ├── reports/
-│   │   ├── analytics/
-│   │   ├── notifications/
-│   │   └── exports/
-│   │
-│   ├── routes/
-│   │   └── index.ts
-│   │
-│   ├── utils/
-│   │   ├── calculations.ts
-│   │   ├── pagination.ts
-│   │   └── date.ts
-│   │
-│   ├── app.ts
-│   └── server.ts
-│
-├── prisma/
-│   └── schema.prisma
-│
-├── tests/
-│
-├── .env
-├── .env.example
-├── package.json
-└── README.md
-```
-
----
-
-# 32. Development Order
-
-Do **not** implement all endpoints at once.
-
-Build the backend in phases.
-
-## Phase 1 — Foundation
-
-```text
-Express
-PostgreSQL
-ORM
-Environment configuration
-Error handling
-Validation
-Swagger
-Logging
-```
+- Node.js
+- Express
+- TypeScript
+- PostgreSQL
+- Prisma
+- Environment configuration
+- Error handling
+- Validation
+- Swagger
+- Logging
+- Testing setup
 
 ## Phase 2 — Authentication
 
-```text
-User
-Register
-Login
-JWT
-Protected routes
-```
+- Users
+- Register
+- Login
+- JWT
+- Refresh token
+- Protected routes
 
-## Phase 3 — Basic Finance
+## Phase 3 — Core Finance
 
-```text
-Accounts
-Income Sources
-Income
-Categories
-Subcategories
-Transactions
-```
+- Accounts
+- Income Sources
+- Income
+- Categories
+- Subcategories
+- Transactions
 
 ## Phase 4 — Budget System
 
-```text
-Budget Templates
-Budget Template Items
-Salary Allocation
-Monthly Budgets
-Budget Tracking
-Budget Warnings
-```
+- Budget Templates
+- Budget Template Items
+- Salary Allocation
+- Monthly Budgets
+- Budget Tracking
+- Budget Warnings
 
 ## Phase 5 — Recurring Finance
 
-```text
-Fixed Expenses
-Recurring Transactions
-Planned Transactions
-```
+- Fixed Expenses
+- Recurring Transactions
+- Planned Transactions
+- Confirmation workflow
 
 ## Phase 6 — Savings & Investments
 
-```text
-Savings Goals
-Savings Contributions
-Investments
-Investment Contributions
-```
+- Savings Goals
+- Savings Contributions
+- Investments
+- Investment Contributions
 
 ## Phase 7 — EMI
 
-```text
-Loans
-Loan Payments
-EMI tracking
-```
+- Loans
+- Loan Payments
+- EMI tracking
 
-## Phase 8 — Goals
+## Phase 8 — Financial Goals
 
-```text
-Financial Goals
-Goal Contributions
-```
+- Financial Goals
+- Goal Contributions
 
 ## Phase 9 — Dashboard
 
-```text
-Cash Flow
-Expense Breakdown
-Budget Utilization
-Savings
-Investment
-Net Worth
-```
+- Cash Flow
+- Expense Breakdown
+- Budget Utilization
+- Savings
+- Investments
+- Net Worth
 
 ## Phase 10 — Reports & Analytics
 
-```text
-Monthly Report
-Yearly Report
-Net Worth Report
-Category Analytics
-Spending Trends
-Budget Performance
-```
+- Monthly Report
+- Yearly Report
+- Net Worth Report
+- Category Analytics
+- Spending Trends
+- Budget Performance
+- Anomaly Detection
 
 ## Phase 11 — Export
 
-```text
-CSV
-Excel
-PDF
-```
+- CSV
+- Excel
+- PDF
 
----
+## Phase 12 — Frontend
 
-# 33. MVP
+- Next.js
+- Dashboard
+- Finance pages
+- Budget pages
+- Reports
+- Settings
+- Dark mode
 
-For the first usable version, implement only:
+## Phase 13 — Mobile
 
-```text
-Authentication
-     ↓
-Accounts
-     ↓
-Income
-     ↓
-Categories
-     ↓
-Transactions
-     ↓
-Budget Templates
-     ↓
-Salary Allocation
-     ↓
-Monthly Budget
-     ↓
-Budget Tracking
-     ↓
-Dashboard
-```
+- React Native / Expo
+- Reuse existing REST API
+'''
 
-Then add:
-
-```text
-Fixed Expenses
-Savings
-Investments
-Loans
-Goals
-Reports
-Analytics
-Exports
-```
-
-This keeps the first backend manageable while still establishing the correct architecture for the complete system.
