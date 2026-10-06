@@ -5,6 +5,7 @@ import { describe, expect, it } from "@jest/globals";
 import request from "supertest";
 import { z } from "zod";
 import { validate } from "../src/middleware/validation.middleware";
+import { loadEnv } from "../src/config/env";
 
 describe("query validation", () => {
   it("normalizes query values without replacing Express 5's getter-only query property", async () => {
@@ -21,5 +22,11 @@ describe("query validation", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ page: 2 });
+  });
+});
+
+describe("environment validation", () => {
+  it("rejects incomplete environment configuration", () => {
+    expect(() => loadEnv({})).toThrow("Invalid environment configuration");
   });
 });

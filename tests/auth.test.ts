@@ -1,6 +1,7 @@
 /// <reference types="jest" />
 
 import bcrypt from "bcrypt";
+import { Prisma } from "@prisma/client";
 import { describe, expect, it, jest } from "@jest/globals";
 import jwt from "jsonwebtoken";
 import request from "supertest";
@@ -61,6 +62,24 @@ describe("POST /api/v1/auth/register", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns a conflict when the registration email already exists", async () => {
+    jest.spyOn(prisma.user, "create").mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("duplicate email", {
+        code: "P2002",
+        clientVersion: "6.19.3",
+      }),
+    );
+
+    const response = await request(app).post("/api/v1/auth/register").send({
+      name: "Akash",
+      email: "existing@example.com",
+      password: "password123",
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("EMAIL_ALREADY_EXISTS");
   });
 
   it("returns a JWT for valid credentials", async () => {
@@ -169,4 +188,19 @@ describe("POST /api/v1/auth/register", () => {
       updatedAt: "2026-09-28T00:00:00.000Z",
     });
   });
+
+  it("rejects /me when the authenticated user no longer exists", async () => {
+    jest.spyOn(prisma.user, "findUnique").mockResolvedValue(null);
+
+    const response = await request(app)
+      .get("/api/v1/auth/me")
+      .set("Authorization", `Bearer ${responseToken()}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe("UNAUTHORIZED");
+  });
 });
+
+function responseToken(): string {
+  return jwt.sign({ sub: "user-id", email: "user@example.com" }, env.JWT_SECRET, { expiresIn: "1h" });
+}

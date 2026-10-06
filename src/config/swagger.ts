@@ -10,6 +10,14 @@ import { budgetTemplatesPaths } from "../modules/budgets/budget-templates.swagge
 import { budgetsPaths } from "../modules/budgets/budgets.swagger.js";
 import { fixedExpensesPaths } from "../modules/fixed-expenses/fixed-expenses.swagger.js";
 import { recurringTransactionsPaths } from "../modules/recurring-transactions/recurring-transactions.swagger.js";
+import { savingsPaths } from "../modules/savings/savings.swagger.js";
+import { investmentsPaths } from "../modules/investments/investments.swagger.js";
+import { loansPaths } from "../modules/loans/loans.swagger.js";
+import { financialGoalsPaths } from "../modules/financial-goals/financial-goals.swagger.js";
+import { dashboardPaths } from "../modules/dashboard/dashboard.swagger.js";
+import { reportsPaths } from "../modules/reports/reports.swagger.js";
+import { analyticsPaths } from "../modules/analytics/analytics.swagger.js";
+import { exportsPaths } from "../modules/exports/exports.swagger.js";
 
 export const swaggerSpec: OpenAPIV3.Document = {
   openapi: "3.0.3",
@@ -31,6 +39,14 @@ export const swaggerSpec: OpenAPIV3.Document = {
     ...budgetsPaths,
     ...fixedExpensesPaths,
     ...recurringTransactionsPaths,
+    ...savingsPaths,
+    ...investmentsPaths,
+    ...loansPaths,
+    ...financialGoalsPaths,
+    ...dashboardPaths,
+    ...reportsPaths,
+    ...analyticsPaths,
+    ...exportsPaths,
     ...categoriesPaths,
     ...healthPaths,
     ...incomePaths,
@@ -398,6 +414,110 @@ export const swaggerSpec: OpenAPIV3.Document = {
       },
       RecurringTransactionResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/RecurringTransaction" } } }] },
       RecurringTransactionListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/RecurringTransaction" } } } }] },
+      CreateSavingsGoalRequest: {
+        type: "object",
+        required: ["name", "targetAmount"],
+        properties: {
+          name: { type: "string", maxLength: 150, example: "Emergency Fund" },
+          targetAmount: { type: "number", minimum: 0, exclusiveMinimum: true, example: 100000 },
+          targetDate: { type: "string", format: "date" },
+          description: { type: "string", maxLength: 1000 },
+        },
+      },
+      UpdateSavingsGoalRequest: { allOf: [{ $ref: "#/components/schemas/CreateSavingsGoalRequest" }], properties: { status: { type: "string", enum: ["ACTIVE", "COMPLETED", "PAUSED", "CANCELLED"] } } },
+      SavingsGoal: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" }, userId: { type: "string", format: "uuid" }, name: { type: "string" },
+          targetAmount: { type: "string", example: "100000.00" }, currentAmount: { type: "string", example: "25000.00" },
+          targetDate: { type: "string", format: "date-time", nullable: true }, description: { type: "string", nullable: true },
+          status: { type: "string", enum: ["ACTIVE", "COMPLETED", "PAUSED", "CANCELLED"] },
+          createdAt: { type: "string", format: "date-time" }, updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateSavingsContributionRequest: { type: "object", required: ["accountId", "amount", "contributionDate"], properties: { accountId: { type: "string", format: "uuid" }, amount: { type: "number", minimum: 0, exclusiveMinimum: true }, contributionDate: { type: "string", format: "date" }, notes: { type: "string" } } },
+      SavingsContribution: { type: "object", properties: { id: { type: "string", format: "uuid" }, savingsGoalId: { type: "string", format: "uuid" }, accountId: { type: "string", format: "uuid" }, amount: { type: "string", example: "5000.00" }, contributionDate: { type: "string", format: "date-time" }, transactionId: { type: "string", format: "uuid" }, notes: { type: "string", nullable: true }, createdAt: { type: "string", format: "date-time" } } },
+      SavingsGoalResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/SavingsGoal" } } }] },
+      SavingsGoalListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/SavingsGoal" } } } }] },
+      SavingsContributionResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/SavingsContribution" } } }] },
+      SavingsContributionListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/SavingsContribution" } } } }] },
+      CreateInvestmentRequest: { type: "object", required: ["name", "investmentType"], properties: { name: { type: "string", maxLength: 150, example: "Index Mutual Fund" }, investmentType: { type: "string", enum: ["MUTUAL_FUND", "GOLD", "FD", "OTHER"] }, description: { type: "string", maxLength: 1000 } } },
+      UpdateInvestmentRequest: { allOf: [{ $ref: "#/components/schemas/CreateInvestmentRequest" }] },
+      Investment: { type: "object", properties: { id: { type: "string", format: "uuid" }, userId: { type: "string", format: "uuid" }, name: { type: "string" }, investmentType: { type: "string" }, description: { type: "string", nullable: true }, isActive: { type: "boolean" }, createdAt: { type: "string", format: "date-time" }, updatedAt: { type: "string", format: "date-time" } } },
+      CreateInvestmentContributionRequest: { type: "object", required: ["accountId", "amount", "investmentDate"], properties: { accountId: { type: "string", format: "uuid" }, amount: { type: "number", minimum: 0, exclusiveMinimum: true }, investmentDate: { type: "string", format: "date" }, notes: { type: "string" } } },
+      InvestmentContribution: { type: "object", properties: { id: { type: "string", format: "uuid" }, investmentId: { type: "string", format: "uuid" }, accountId: { type: "string", format: "uuid" }, amount: { type: "string", example: "10000.00" }, investmentDate: { type: "string", format: "date-time" }, transactionId: { type: "string", format: "uuid" }, notes: { type: "string", nullable: true }, createdAt: { type: "string", format: "date-time" } } },
+      InvestmentResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/Investment" } } }] },
+      InvestmentListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/Investment" } } } }] },
+      InvestmentContributionResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/InvestmentContribution" } } }] },
+      InvestmentContributionListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/InvestmentContribution" } } } }] },
+      CreateLoanRequest: {
+        type: "object",
+        required: ["name", "principalAmount", "interestRate", "emiAmount", "tenureMonths", "startDate"],
+        properties: {
+          name: { type: "string", maxLength: 150, example: "Home Loan" },
+          principalAmount: { type: "number", minimum: 0, exclusiveMinimum: true, example: 500000 },
+          interestRate: { type: "number", minimum: 0, example: 8.5 },
+          emiAmount: { type: "number", minimum: 0, exclusiveMinimum: true, example: 12000 },
+          tenureMonths: { type: "integer", minimum: 1, example: 60 },
+          startDate: { type: "string", format: "date" },
+          endDate: { type: "string", format: "date" },
+          description: { type: "string", maxLength: 1000 },
+        },
+      },
+      UpdateLoanRequest: { allOf: [{ $ref: "#/components/schemas/CreateLoanRequest" }], properties: { status: { type: "string", enum: ["ACTIVE", "COMPLETED", "CANCELLED"] } } },
+      Loan: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" }, userId: { type: "string", format: "uuid" }, name: { type: "string" },
+          principalAmount: { type: "string", example: "500000.00" }, interestRate: { type: "string", example: "8.50" }, emiAmount: { type: "string", example: "12000.00" },
+          tenureMonths: { type: "integer" }, startDate: { type: "string", format: "date-time" }, endDate: { type: "string", format: "date-time", nullable: true },
+          status: { type: "string", enum: ["ACTIVE", "COMPLETED", "CANCELLED"] }, description: { type: "string", nullable: true },
+          createdAt: { type: "string", format: "date-time" }, updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateLoanPaymentRequest: { type: "object", required: ["accountId", "amount", "paymentDate"], properties: { accountId: { type: "string", format: "uuid" }, amount: { type: "number", minimum: 0, exclusiveMinimum: true }, paymentDate: { type: "string", format: "date" }, notes: { type: "string" } } },
+      LoanPayment: { type: "object", properties: { id: { type: "string", format: "uuid" }, loanId: { type: "string", format: "uuid" }, accountId: { type: "string", format: "uuid" }, transactionId: { type: "string", format: "uuid" }, amount: { type: "string", example: "12000.00" }, paymentDate: { type: "string", format: "date-time" }, notes: { type: "string", nullable: true }, createdAt: { type: "string", format: "date-time" } } },
+      LoanResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { allOf: [{ $ref: "#/components/schemas/Loan" }, { type: "object", properties: { paidAmount: { type: "string" }, remainingPrincipal: { type: "string" }, payments: { type: "array", items: { $ref: "#/components/schemas/LoanPayment" } } } }] } } }] },
+      LoanListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/Loan" } } } }] },
+      LoanPaymentResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/LoanPayment" } } }] },
+      LoanPaymentListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/LoanPayment" } } } }] },
+      CreateFinancialGoalRequest: {
+        type: "object",
+        required: ["name", "targetAmount"],
+        properties: {
+          name: { type: "string", maxLength: 150, example: "Buy a car" },
+          targetAmount: { type: "number", minimum: 0, exclusiveMinimum: true, example: 800000 },
+          targetDate: { type: "string", format: "date" },
+          description: { type: "string", maxLength: 1000 },
+        },
+      },
+      UpdateFinancialGoalRequest: { allOf: [{ $ref: "#/components/schemas/CreateFinancialGoalRequest" }], properties: { status: { type: "string", enum: ["ACTIVE", "COMPLETED", "CANCELLED"] } } },
+      FinancialGoal: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" }, userId: { type: "string", format: "uuid" }, name: { type: "string" },
+          targetAmount: { type: "string", example: "800000.00" }, currentAmount: { type: "string", example: "100000.00" },
+          targetDate: { type: "string", format: "date-time", nullable: true }, status: { type: "string", enum: ["ACTIVE", "COMPLETED", "CANCELLED"] },
+          description: { type: "string", nullable: true }, createdAt: { type: "string", format: "date-time" }, updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateFinancialGoalContributionRequest: { type: "object", required: ["amount", "contributionDate"], properties: { amount: { type: "number", minimum: 0, exclusiveMinimum: true }, contributionDate: { type: "string", format: "date" }, notes: { type: "string" } } },
+      FinancialGoalContribution: { type: "object", properties: { id: { type: "string", format: "uuid" }, financialGoalId: { type: "string", format: "uuid" }, amount: { type: "string", example: "10000.00" }, contributionDate: { type: "string", format: "date-time" }, transactionId: { type: "string", format: "uuid", nullable: true }, notes: { type: "string", nullable: true }, createdAt: { type: "string", format: "date-time" } } },
+      FinancialGoalResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/FinancialGoal" } } }] },
+      FinancialGoalListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/FinancialGoal" } } } }] },
+      FinancialGoalContributionResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { $ref: "#/components/schemas/FinancialGoalContribution" } } }] },
+      FinancialGoalContributionListResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { $ref: "#/components/schemas/FinancialGoalContribution" } } } }] },
+      DashboardResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "object", properties: { income: { type: "string" }, expenses: { type: "string" }, savings: { type: "string" }, investments: { type: "string" }, remaining: { type: "string" }, netWorth: { type: "string" } } } } }] },
+      CashFlowResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { month: { type: "string", example: "2026-09" }, income: { type: "string" }, expenses: { type: "string" }, savings: { type: "string" }, investments: { type: "string" }, netCashFlow: { type: "string" } } } } } }] },
+      ExpenseBreakdownResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { category: { type: "string" }, amount: { type: "string" } } } } } }] },
+      BudgetUtilizationResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { budgetId: { type: "string", format: "uuid" }, categoryId: { type: "string", format: "uuid" }, allocated: { type: "string" }, spent: { type: "string" }, remaining: { type: "string" }, percentageUsed: { type: "string" } } } } } }] },
+      HistoryResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { date: { type: "string", format: "date-time" }, amount: { type: "string" }, goalId: { type: "string", format: "uuid" }, investmentId: { type: "string", format: "uuid" } } } } } }] },
+      NetWorthResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "object", properties: { assets: { type: "string" }, liabilities: { type: "string" }, netWorth: { type: "string" } } } } }] },
+      ReportResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "object" } } }] },
+      CategoryReportResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { categoryId: { type: "string", format: "uuid", nullable: true }, category: { type: "string" }, amount: { type: "string" } } } } } }] },
+      CashFlowReportResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "object", properties: { income: { type: "string" }, expenses: { type: "string" }, savings: { type: "string" }, investments: { type: "string" }, netCashFlow: { type: "string" } } } } }] },
+      TrendResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { month: { type: "string" }, amount: { type: "string" } } } } } }] },
+      BudgetPerformanceResponse: { allOf: [{ $ref: "#/components/schemas/SuccessResponse" }, { type: "object", properties: { data: { type: "array", items: { type: "object", properties: { budgetId: { type: "string", format: "uuid" }, categoryId: { type: "string", format: "uuid" }, allocated: { type: "string" }, spent: { type: "string" }, variance: { type: "string" } } } } } }] },
       User: {
         type: "object",
         properties: {

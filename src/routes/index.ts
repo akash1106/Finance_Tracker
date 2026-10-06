@@ -10,6 +10,14 @@ import { budgetTemplatesRouter } from "../modules/budgets/budget-templates.route
 import { budgetsRouter } from "../modules/budgets/budgets.routes.js";
 import { fixedExpensesRouter } from "../modules/fixed-expenses/fixed-expenses.routes.js";
 import { recurringTransactionsRouter } from "../modules/recurring-transactions/recurring-transactions.routes.js";
+import { savingsRouter } from "../modules/savings/savings.routes.js";
+import { investmentsRouter } from "../modules/investments/investments.routes.js";
+import { loansRouter } from "../modules/loans/loans.routes.js";
+import { financialGoalsRouter } from "../modules/financial-goals/financial-goals.routes.js";
+import { dashboardRouter } from "../modules/dashboard/dashboard.routes.js";
+import { reportsRouter } from "../modules/reports/reports.routes.js";
+import { analyticsRouter } from "../modules/analytics/analytics.routes.js";
+import { exportsRouter } from "../modules/exports/exports.routes.js";
 
 export const apiRouter = Router();
 
@@ -24,4 +32,12 @@ apiRouter.use("/budget-templates", budgetTemplatesRouter);
 apiRouter.use("/budgets", budgetsRouter);
 apiRouter.use("/fixed-expenses", fixedExpensesRouter);
 apiRouter.use("/recurring-transactions", recurringTransactionsRouter);
+apiRouter.use("/savings-goals", savingsRouter);
+apiRouter.use("/investments", investmentsRouter);
+apiRouter.use("/loans", loansRouter);
+apiRouter.use("/financial-goals", financialGoalsRouter);
+apiRouter.use("/dashboard", dashboardRouter);
+apiRouter.use("/reports", reportsRouter);
+apiRouter.use("/analytics", analyticsRouter);
+apiRouter.use("/exports", exportsRouter);
 apiRouter.use("/health", healthRouter);
