@@ -1,10 +1,15 @@
 export interface DashboardSummary {
-  totalBalance: number;
-  monthlyIncome: number;
-  monthlyExpenses: number;
-  monthlySavings: number;
-  totalInvestments: number;
-  netWorth: number;
+  income?: number | string;
+  expenses?: number | string;
+  savings?: number | string;
+  investments?: number | string;
+  remaining?: number | string;
+  netWorth?: number | string;
+  totalBalance?: number | string;
+  monthlyIncome?: number | string;
+  monthlyExpenses?: number | string;
+  monthlySavings?: number | string;
+  totalInvestments?: number | string;
 }
 
 export interface CashFlowDataPoint {

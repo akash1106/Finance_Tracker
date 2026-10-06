@@ -49,7 +49,7 @@ export default function AccountsPage() {
     let otherBalance = 0;
 
     accounts.forEach((acc) => {
-      const balance = Number(acc.currentBalance ?? acc.openingBalance) || 0;
+      const balance = Number(acc.currentBalance ?? acc.balance ?? acc.openingBalance) || 0;
       totalBalance += balance;
       if (acc.accountType === "BANK") bankBalance += balance;
       else if (acc.accountType === "CASH") cashBalance += balance;
@@ -175,7 +175,7 @@ export default function AccountsPage() {
           {accounts.map((account) => {
             const isBank = account.accountType === "BANK";
             const isCash = account.accountType === "CASH";
-            const currentBal = Number(account.currentBalance ?? account.openingBalance) || 0;
+            const currentBal = Number(account.currentBalance ?? account.balance ?? account.openingBalance) || 0;
 
             return (
               <Card

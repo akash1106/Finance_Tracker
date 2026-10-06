@@ -33,6 +33,7 @@ import {
 } from "@/components/ui";
 import { useAccount } from "@/hooks/use-accounts";
 import { useTransactions } from "@/hooks/use-transactions";
+import { useIncome } from "@/hooks/use-income";
 import { formatCurrency } from "@/lib/formatters/currency";
 import { formatDate } from "@/lib/formatters/date";
 
@@ -42,19 +43,50 @@ export default function AccountDetailPage() {
 
   const { data: account, isLoading: isLoadingAccount, isError: isAccountError } = useAccount(id);
   const { data: txData, isLoading: isLoadingTx } = useTransactions({ accountId: id, limit: 50 });
+  const { data: incomeData, isLoading: isLoadingIncome } = useIncome({ accountId: id });
 
   const transactions = txData?.items || [];
+  const incomeItems = incomeData?.items || [];
 
   const metrics = useMemo(() => {
     let totalInflow = 0;
     let totalOutflow = 0;
+    incomeItems.forEach((inc) => {
+      totalInflow += Number(inc.amount) || 0;
+    });
     transactions.forEach((tx) => {
       const amt = Number(tx.amount) || 0;
       if (tx.transactionType === "INCOME") totalInflow += amt;
       else if (tx.transactionType === "EXPENSE") totalOutflow += amt;
     });
     return { totalInflow, totalOutflow };
-  }, [transactions]);
+  }, [transactions, incomeItems]);
+
+  const allEntries = useMemo(() => {
+    const txEntries = transactions.map((tx) => ({
+      id: tx.id,
+      date: tx.transactionDate,
+      description: tx.description || "Untitled Transaction",
+      categoryName: tx.category?.name || "General",
+      type: tx.transactionType,
+      isExpense: tx.transactionType === "EXPENSE",
+      isIncome: tx.transactionType === "INCOME",
+      amount: tx.amount,
+    }));
+    const incEntries = incomeItems.map((inc) => ({
+      id: inc.id,
+      date: inc.receivedDate,
+      description: inc.description || (inc.incomeSource?.name ? `${inc.incomeSource.name} Inflow` : "Income Deposit"),
+      categoryName: inc.incomeSource?.name || "Income",
+      type: "INCOME",
+      isExpense: false,
+      isIncome: true,
+      amount: inc.amount,
+    }));
+    return [...txEntries, ...incEntries].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [transactions, incomeItems]);
 
   if (isLoadingAccount) {
     return (
@@ -86,7 +118,7 @@ export default function AccountDetailPage() {
 
   const isBank = account.accountType === "BANK";
   const isCash = account.accountType === "CASH";
-  const currentBalance = Number(account.currentBalance ?? account.openingBalance) || 0;
+  const currentBalance = Number(account.currentBalance ?? account.balance ?? account.openingBalance) || 0;
 
   return (
     <div className="space-y-6">
@@ -174,13 +206,13 @@ export default function AccountDetailPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {isLoadingTx ? (
+          {isLoadingTx || isLoadingIncome ? (
             <div className="p-6 space-y-3">
               {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
-          ) : transactions.length === 0 ? (
+          ) : allEntries.length === 0 ? (
             <div className="p-8">
               <EmptyState
                 icon={Calendar}
@@ -202,27 +234,27 @@ export default function AccountDetailPage() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead>Category / Source</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((tx) => {
-                    const isExpense = tx.transactionType === "EXPENSE";
-                    const isIncome = tx.transactionType === "INCOME";
+                  {allEntries.map((entry) => {
+                    const isExpense = entry.isExpense;
+                    const isIncome = entry.isIncome;
 
                     return (
-                      <TableRow key={tx.id} className="hover:bg-muted/40 transition-colors">
+                      <TableRow key={entry.id} className="hover:bg-muted/40 transition-colors">
                         <TableCell className="font-medium whitespace-nowrap text-xs text-muted-foreground">
-                          {formatDate(tx.transactionDate, "dd MMM yyyy")}
+                          {formatDate(entry.date, "dd MMM yyyy")}
                         </TableCell>
                         <TableCell className="font-semibold text-foreground text-sm">
-                          {tx.description || "Untitled Transaction"}
+                          {entry.description}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[11px] font-normal">
-                            {tx.category?.name || "General"}
+                            {entry.categoryName}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -232,7 +264,7 @@ export default function AccountDetailPage() {
                             }
                             className="text-[10px]"
                           >
-                            {tx.transactionType}
+                            {entry.type}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-bold whitespace-nowrap">
@@ -246,7 +278,7 @@ export default function AccountDetailPage() {
                             }
                           >
                             {isExpense ? "-" : isIncome ? "+" : ""}
-                            {formatCurrency(tx.amount)}
+                            {formatCurrency(entry.amount)}
                           </span>
                         </TableCell>
                       </TableRow>

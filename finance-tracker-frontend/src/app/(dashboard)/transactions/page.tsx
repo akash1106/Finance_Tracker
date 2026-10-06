@@ -44,9 +44,26 @@ import {
 import { useTransactions, useDeleteTransaction } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
+import { useIncome, useDeleteIncome } from "@/hooks/use-income";
 import { formatCurrency } from "@/lib/formatters/currency";
 import { formatDate } from "@/lib/formatters/date";
 import type { Transaction } from "@/types/transaction";
+
+interface UnifiedEntry {
+  id: string;
+  date: string;
+  description: string;
+  notes?: string | null;
+  categoryName: string;
+  subcategoryName?: string;
+  accountName: string;
+  paymentMethod: string;
+  amount: number;
+  isExpense: boolean;
+  isIncome: boolean;
+  type: string;
+  isIncomeRecord: boolean;
+}
 
 export default function TransactionsPage() {
   const [page, setPage] = useState(1);
@@ -57,12 +74,17 @@ export default function TransactionsPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  // Transaction for detail modal
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Entry for detail modal
+  const [selectedEntry, setSelectedEntry] = useState<UnifiedEntry | null>(null);
+  const [deletingItem, setDeletingItem] = useState<{ id: string; isIncomeRecord: boolean } | null>(null);
 
   const { data: accountsData } = useAccounts();
   const { data: categoriesData } = useCategories();
+  const { data: incomeData } = useIncome({
+    accountId: accountFilter !== "ALL" ? accountFilter : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
 
   const queryParams = useMemo(() => {
     const params: Record<string, unknown> = {
@@ -80,21 +102,30 @@ export default function TransactionsPage() {
 
   const { data, isLoading, isError } = useTransactions(queryParams);
   const deleteMutation = useDeleteTransaction();
+  const deleteIncomeMutation = useDeleteIncome();
 
   const transactions = data?.items || [];
+  const incomeItems = incomeData?.items || [];
   const pagination = data?.pagination;
 
   // Calculate top quick summaries from current view
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
+
+    // Inflow from Income module
+    incomeItems.forEach((inc) => {
+      income += Number(inc.amount) || 0;
+    });
+
+    // Inflow & outflow from Transaction ledger
     transactions.forEach((tx) => {
       const amt = Number(tx.amount) || 0;
       if (tx.transactionType === "INCOME") income += amt;
       else if (tx.transactionType === "EXPENSE") expense += amt;
     });
     return { income, expense, net: income - expense };
-  }, [transactions]);
+  }, [transactions, incomeItems]);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -114,11 +145,55 @@ export default function TransactionsPage() {
     startDate ||
     endDate;
 
-  const handleDelete = async (id: string) => {
-    await deleteMutation.mutateAsync(id);
-    setDeletingId(null);
-    if (selectedTransaction?.id === id) {
-      setSelectedTransaction(null);
+  const unifiedEntries: UnifiedEntry[] = useMemo(() => {
+    const txMapped: UnifiedEntry[] = transactions.map((tx) => ({
+      id: tx.id,
+      date: tx.transactionDate,
+      description: tx.description || "Untitled Transaction",
+      notes: tx.notes,
+      categoryName: tx.category?.name || "General",
+      subcategoryName: tx.subcategory?.name,
+      accountName: tx.account?.name || "Default Account",
+      paymentMethod: tx.paymentMethod || "UPI",
+      amount: Number(tx.amount) || 0,
+      isExpense: tx.transactionType === "EXPENSE",
+      isIncome: tx.transactionType === "INCOME",
+      type: tx.transactionType,
+      isIncomeRecord: false,
+    }));
+
+    const incMapped: UnifiedEntry[] =
+      typeFilter === "EXPENSE"
+        ? []
+        : incomeItems.map((inc) => ({
+            id: inc.id,
+            date: inc.receivedDate,
+            description: inc.description || (inc.incomeSource?.name ? `${inc.incomeSource.name} Inflow` : "Income Deposit"),
+            notes: inc.notes,
+            categoryName: inc.incomeSource?.name || "Income",
+            subcategoryName: inc.incomeSource?.isSalary ? "Salary" : undefined,
+            accountName: inc.account?.name || "Deposit Account",
+            paymentMethod: "Deposit",
+            amount: Number(inc.amount) || 0,
+            isExpense: false,
+            isIncome: true,
+            type: "INCOME",
+            isIncomeRecord: true,
+          }));
+
+    const combined = [...txMapped, ...incMapped];
+    return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, incomeItems, typeFilter]);
+
+  const handleDelete = async (id: string, isIncomeRecord?: boolean) => {
+    if (isIncomeRecord) {
+      await deleteIncomeMutation.mutateAsync(id);
+    } else {
+      await deleteMutation.mutateAsync(id);
+    }
+    setDeletingItem(null);
+    if (selectedEntry?.id === id) {
+      setSelectedEntry(null);
     }
   };
 
@@ -327,7 +402,7 @@ export default function TransactionsPage() {
             <div className="p-8 text-center text-sm text-destructive">
               Failed to load transactions. Please check backend connection.
             </div>
-          ) : transactions.length === 0 ? (
+          ) : unifiedEntries.length === 0 ? (
             <div className="p-8">
               <EmptyState
                 icon={ArrowLeftRight}
@@ -361,43 +436,43 @@ export default function TransactionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((tx) => {
-                    const isExpense = tx.transactionType === "EXPENSE";
-                    const isIncome = tx.transactionType === "INCOME";
+                  {unifiedEntries.map((entry) => {
+                    const isExpense = entry.isExpense;
+                    const isIncome = entry.isIncome;
 
                     return (
-                      <TableRow key={tx.id} className="hover:bg-muted/40 transition-colors">
+                      <TableRow key={entry.id} className="hover:bg-muted/40 transition-colors">
                         <TableCell className="font-medium whitespace-nowrap text-xs text-muted-foreground">
-                          {formatDate(tx.transactionDate, "dd MMM yyyy")}
+                          {formatDate(entry.date, "dd MMM yyyy")}
                         </TableCell>
                         <TableCell>
                           <div className="font-semibold text-foreground text-sm">
-                            {tx.description || "Untitled Transaction"}
+                            {entry.description || "Untitled Transaction"}
                           </div>
-                          {tx.notes && (
+                          {entry.notes && (
                             <div className="text-xs text-muted-foreground truncate max-w-xs">
-                              {tx.notes}
+                              {entry.notes}
                             </div>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <Badge variant="outline" className="text-[11px] font-normal">
-                              {tx.category?.name || "General"}
+                              {entry.categoryName}
                             </Badge>
-                            {tx.subcategory?.name && (
+                            {entry.subcategoryName && (
                               <span className="text-[11px] text-muted-foreground">
-                                / {tx.subcategory.name}
+                                / {entry.subcategoryName}
                               </span>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {tx.account?.name || "Default Account"}
+                          {entry.accountName}
                         </TableCell>
                         <TableCell>
                           <span className="text-xs text-muted-foreground font-mono">
-                            {tx.paymentMethod || "UPI"}
+                            {entry.paymentMethod}
                           </span>
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap font-semibold">
@@ -411,7 +486,7 @@ export default function TransactionsPage() {
                             }
                           >
                             {isExpense ? "-" : isIncome ? "+" : ""}
-                            {formatCurrency(tx.amount)}
+                            {formatCurrency(entry.amount)}
                           </span>
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
@@ -420,7 +495,7 @@ export default function TransactionsPage() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                              onClick={() => setSelectedTransaction(tx)}
+                              onClick={() => setSelectedEntry(entry)}
                               title="View Details"
                             >
                               <Eye className="h-4 w-4" />
@@ -429,7 +504,12 @@ export default function TransactionsPage() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => setDeletingId(tx.id)}
+                              onClick={() =>
+                                setDeletingItem({
+                                  id: entry.id,
+                                  isIncomeRecord: entry.isIncomeRecord,
+                                })
+                              }
                               title="Delete Transaction"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -462,8 +542,8 @@ export default function TransactionsPage() {
 
       {/* Transaction Details Modal Dialog */}
       <Dialog
-        open={Boolean(selectedTransaction)}
-        onOpenChange={(open) => !open && setSelectedTransaction(null)}
+        open={Boolean(selectedEntry)}
+        onOpenChange={(open) => !open && setSelectedEntry(null)}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -471,33 +551,33 @@ export default function TransactionsPage() {
             <DialogDescription>Full audit information for this ledger entry</DialogDescription>
           </DialogHeader>
 
-          {selectedTransaction && (
+          {selectedEntry && (
             <div className="space-y-4 text-sm py-2">
               <div className="p-4 rounded-xl bg-muted/40 border border-border flex items-center justify-between">
                 <div>
                   <span className="text-xs text-muted-foreground">Amount</span>
                   <div
                     className={`text-2xl font-bold ${
-                      selectedTransaction.transactionType === "EXPENSE"
+                      selectedEntry.isExpense
                         ? "text-rose-500"
-                        : selectedTransaction.transactionType === "INCOME"
+                        : selectedEntry.isIncome
                         ? "text-emerald-500"
                         : "text-foreground"
                     }`}
                   >
-                    {formatCurrency(selectedTransaction.amount)}
+                    {formatCurrency(selectedEntry.amount)}
                   </div>
                 </div>
                 <Badge
                   variant={
-                    selectedTransaction.transactionType === "EXPENSE"
+                    selectedEntry.isExpense
                       ? "destructive"
-                      : selectedTransaction.transactionType === "INCOME"
+                      : selectedEntry.isIncome
                       ? "default"
                       : "secondary"
                   }
                 >
-                  {selectedTransaction.transactionType}
+                  {selectedEntry.type}
                 </Badge>
               </div>
 
@@ -505,47 +585,47 @@ export default function TransactionsPage() {
                 <div>
                   <span className="text-muted-foreground">Description:</span>
                   <p className="font-medium text-foreground mt-0.5">
-                    {selectedTransaction.description || "-"}
+                    {selectedEntry.description || "-"}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Date:</span>
                   <p className="font-medium text-foreground mt-0.5">
-                    {formatDate(selectedTransaction.transactionDate, "dd MMMM yyyy")}
+                    {formatDate(selectedEntry.date, "dd MMMM yyyy")}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Category:</span>
                   <p className="font-medium text-foreground mt-0.5">
-                    {selectedTransaction.category?.name || "General"}
-                    {selectedTransaction.subcategory?.name &&
-                      ` (${selectedTransaction.subcategory.name})`}
+                    {selectedEntry.categoryName}
+                    {selectedEntry.subcategoryName &&
+                      ` (${selectedEntry.subcategoryName})`}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Account:</span>
                   <p className="font-medium text-foreground mt-0.5">
-                    {selectedTransaction.account?.name || "Default Account"}
+                    {selectedEntry.accountName}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Payment Method:</span>
                   <p className="font-medium text-foreground mt-0.5">
-                    {selectedTransaction.paymentMethod || "UPI"}
+                    {selectedEntry.paymentMethod}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Transaction ID:</span>
                   <p className="font-mono text-[10px] text-muted-foreground mt-0.5 truncate">
-                    {selectedTransaction.id}
+                    {selectedEntry.id}
                   </p>
                 </div>
               </div>
 
-              {selectedTransaction.notes && (
+              {selectedEntry.notes && (
                 <div className="p-3 rounded-lg bg-muted/30 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">Notes: </span>
-                  {selectedTransaction.notes}
+                  {selectedEntry.notes}
                 </div>
               )}
             </div>
@@ -555,11 +635,11 @@ export default function TransactionsPage() {
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
             </DialogClose>
-            {selectedTransaction && (
+            {selectedEntry && (
               <Button
                 variant="destructive"
-                onClick={() => handleDelete(selectedTransaction.id)}
-                isLoading={deleteMutation.isPending}
+                onClick={() => handleDelete(selectedEntry.id, selectedEntry.isIncomeRecord)}
+                isLoading={deleteMutation.isPending || deleteIncomeMutation.isPending}
               >
                 Delete
               </Button>
@@ -569,7 +649,7 @@ export default function TransactionsPage() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={Boolean(deletingId)} onOpenChange={(open) => !open && setDeletingId(null)}>
+      <Dialog open={Boolean(deletingItem)} onOpenChange={(open) => !open && setDeletingItem(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Transaction?</DialogTitle>
@@ -583,8 +663,8 @@ export default function TransactionsPage() {
             </DialogClose>
             <Button
               variant="destructive"
-              onClick={() => deletingId && handleDelete(deletingId)}
-              isLoading={deleteMutation.isPending}
+              onClick={() => deletingItem && handleDelete(deletingItem.id, deletingItem.isIncomeRecord)}
+              isLoading={deleteMutation.isPending || deleteIncomeMutation.isPending}
             >
               Confirm Delete
             </Button>

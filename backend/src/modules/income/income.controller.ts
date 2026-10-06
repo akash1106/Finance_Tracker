@@ -13,10 +13,25 @@ function id(req: Request): string {
   return req.params.id;
 }
 
-function response(income: { id: string; userId: string; incomeSourceId: string; accountId: string; amount: { toFixed: (digits: number) => string }; receivedDate: Date; description: string | null; isRecurring: boolean; notes: string | null; createdAt: Date; updatedAt: Date }) {
+function response(income: {
+  id: string;
+  userId: string;
+  incomeSourceId: string;
+  accountId: string;
+  amount: { toFixed?: (digits: number) => string } | string | number;
+  receivedDate: Date;
+  description: string | null;
+  isRecurring: boolean;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  incomeSource?: unknown;
+  account?: unknown;
+}) {
+  const amt = income.amount;
   return {
     ...income,
-    amount: income.amount.toFixed(2),
+    amount: typeof amt === "object" && amt !== null && "toFixed" in amt && typeof amt.toFixed === "function" ? amt.toFixed(2) : String(amt),
   };
 }
 
@@ -43,7 +58,13 @@ export async function listIncome(req: Request, res: Response): Promise<void> {
   };
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await prisma.$transaction([
-    prisma.incomeTransaction.findMany({ where, orderBy: { receivedDate: "desc" }, skip, take: query.limit }),
+    prisma.incomeTransaction.findMany({
+      where,
+      orderBy: { receivedDate: "desc" },
+      skip,
+      take: query.limit,
+      include: { incomeSource: true, account: true },
+    }),
     prisma.incomeTransaction.count({ where }),
   ]);
 
@@ -51,7 +72,10 @@ export async function listIncome(req: Request, res: Response): Promise<void> {
 }
 
 export async function getIncome(req: Request, res: Response): Promise<void> {
-  const income = await prisma.incomeTransaction.findFirst({ where: { id: id(req), userId: userId(req) } });
+  const income = await prisma.incomeTransaction.findFirst({
+    where: { id: id(req), userId: userId(req) },
+    include: { incomeSource: true, account: true },
+  });
   if (!income) throw new AppError(404, "INCOME_NOT_FOUND", "Income transaction was not found");
   res.json({ success: true, data: response(income) });
 }
@@ -60,7 +84,10 @@ export async function createIncome(req: Request, res: Response): Promise<void> {
   const ownerId = userId(req);
   const input = req.body as CreateIncomeInput;
   await assertReferencesBelongToUser(input, ownerId);
-  const income = await prisma.incomeTransaction.create({ data: { ...input, userId: ownerId } });
+  const income = await prisma.incomeTransaction.create({
+    data: { ...input, userId: ownerId },
+    include: { incomeSource: true, account: true },
+  });
   res.status(201).json({ success: true, data: response(income), message: "Income recorded successfully" });
 }
 
@@ -71,7 +98,11 @@ export async function updateIncome(req: Request, res: Response): Promise<void> {
   if (!existing) throw new AppError(404, "INCOME_NOT_FOUND", "Income transaction was not found");
   const input = req.body as UpdateIncomeInput;
   await assertReferencesBelongToUser(input, ownerId);
-  const income = await prisma.incomeTransaction.update({ where: { id: existing.id }, data: input });
+  const income = await prisma.incomeTransaction.update({
+    where: { id: existing.id },
+    data: input,
+    include: { incomeSource: true, account: true },
+  });
   res.json({ success: true, data: response(income), message: "Income updated successfully" });
 }
 

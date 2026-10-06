@@ -45,12 +45,15 @@ async function totals(userId: string, query: DashboardQuery) {
     ...(range.from || range.to ? { transactionDate: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lte: range.to } : {}) } } : {}),
   };
 
-  const [income, expenses, savings, investments] = await prisma.$transaction([
+  const results = await prisma.$transaction([
     prisma.incomeTransaction.aggregate({ where: incomeWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { ...transactionWhere, transactionType: "INCOME" }, _sum: { amount: true } }),
     prisma.transaction.aggregate({ where: { ...transactionWhere, transactionType: "EXPENSE" }, _sum: { amount: true } }),
     prisma.transaction.aggregate({ where: { ...transactionWhere, transactionType: "SAVING" }, _sum: { amount: true } }),
     prisma.transaction.aggregate({ where: { ...transactionWhere, transactionType: "INVESTMENT" }, _sum: { amount: true } }),
-  ]);
+  ]) as Array<{ _sum?: { amount?: Prisma.Decimal | null } } | undefined>;
+
+  const [income, txIncome, expenses, savings, investments] = results;
 
   let loanPaymentsAmount = new Prisma.Decimal(0);
   try {
@@ -58,16 +61,20 @@ async function totals(userId: string, query: DashboardQuery) {
       where: { ...transactionWhere, transactionType: "LOAN_PAYMENT" },
       _sum: { amount: true },
     });
-    loanPaymentsAmount = loanPayments._sum.amount ?? new Prisma.Decimal(0);
+    loanPaymentsAmount = loanPayments?._sum?.amount ?? new Prisma.Decimal(0);
   } catch {
     // Graceful fallback for mocked unit tests
   }
 
+  const incomeSum = income?._sum?.amount ?? new Prisma.Decimal(0);
+  const txIncomeSum = txIncome?._sum?.amount ?? new Prisma.Decimal(0);
+  const totalIncome = incomeSum.add(txIncomeSum);
+
   return {
-    income: income._sum.amount ?? new Prisma.Decimal(0),
-    expenses: expenses._sum.amount ?? new Prisma.Decimal(0),
-    savings: savings._sum.amount ?? new Prisma.Decimal(0),
-    investments: investments._sum.amount ?? new Prisma.Decimal(0),
+    income: totalIncome,
+    expenses: expenses?._sum?.amount ?? new Prisma.Decimal(0),
+    savings: savings?._sum?.amount ?? new Prisma.Decimal(0),
+    investments: investments?._sum?.amount ?? new Prisma.Decimal(0),
     loanPayments: loanPaymentsAmount,
   };
 }
@@ -134,6 +141,9 @@ export async function getCashFlow(req: Request, res: Response): Promise<void> {
   for (const entry of transactions) {
     const key = monthKey(entry.transactionDate);
     const value = get(key);
+    if (entry.transactionType === "INCOME") {
+      value.income = value.income.add(entry.amount);
+    }
     if (entry.transactionType === "EXPENSE" || entry.transactionType === "LOAN_PAYMENT") {
       value.expenses = value.expenses.add(entry.amount);
     }

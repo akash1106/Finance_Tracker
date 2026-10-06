@@ -43,6 +43,7 @@ import {
   type NewSourceFormData,
 } from "@/schemas/income.schema";
 import { toInputDate } from "@/lib/formatters/date";
+import { formatCurrency } from "@/lib/formatters/currency";
 
 export default function NewIncomePage() {
   const router = useRouter();
@@ -211,10 +212,13 @@ export default function NewIncomePage() {
                         value: "",
                         label: isLoadingAccounts ? "Loading accounts..." : "Select deposit account",
                       },
-                      ...accounts.map((a) => ({
-                        value: a.id,
-                        label: `${a.name} (${a.accountType})`,
-                      })),
+                      ...accounts.map((a) => {
+                        const bal = Number(a.currentBalance ?? a.balance ?? a.openingBalance) || 0;
+                        return {
+                          value: a.id,
+                          label: `${a.name} (${a.accountType} — ${formatCurrency(bal)})`,
+                        };
+                      }),
                     ]}
                   />
                 )}

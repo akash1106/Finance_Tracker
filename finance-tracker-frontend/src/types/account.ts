@@ -5,8 +5,9 @@ export interface Account {
   userId: string;
   name: string;
   accountType: AccountType | string;
-  openingBalance: number;
-  currentBalance?: number;
+  openingBalance: number | string;
+  balance?: number | string;
+  currentBalance?: number | string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

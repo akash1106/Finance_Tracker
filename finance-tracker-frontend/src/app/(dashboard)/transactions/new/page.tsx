@@ -32,6 +32,7 @@ import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories, useSubcategories } from "@/hooks/use-categories";
 import { transactionSchema, type TransactionFormData } from "@/schemas/transaction.schema";
 import { toInputDate } from "@/lib/formatters/date";
+import { formatCurrency } from "@/lib/formatters/currency";
 
 export default function NewTransactionPage() {
   const router = useRouter();
@@ -167,10 +168,13 @@ export default function NewTransactionPage() {
                           value: "",
                           label: isLoadingAccounts ? "Loading accounts..." : "Select account",
                         },
-                        ...accounts.map((acc) => ({
-                          value: acc.id,
-                          label: `${acc.name} (${acc.accountType})`,
-                        })),
+                        ...accounts.map((acc) => {
+                          const bal = Number(acc.currentBalance ?? acc.balance ?? acc.openingBalance) || 0;
+                          return {
+                            value: acc.id,
+                            label: `${acc.name} (${acc.accountType} — ${formatCurrency(bal)})`,
+                          };
+                        }),
                       ]}
                     />
                   )}

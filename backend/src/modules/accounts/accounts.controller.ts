@@ -24,19 +24,23 @@ function getAccountId(request: Request): string {
 
 async function computeAccountBalance(accountId: string, userId: string, openingBalance: Prisma.Decimal): Promise<Prisma.Decimal> {
   try {
-    const [incomeSum, txSum] = await Promise.all([
+    const [incomeSum, txIncomeSum, txExpenseSum] = await Promise.all([
       prisma.incomeTransaction.aggregate({
         where: { accountId, userId },
         _sum: { amount: true },
       }),
       prisma.transaction.aggregate({
-        where: { accountId, userId },
+        where: { accountId, userId, transactionType: "INCOME" },
+        _sum: { amount: true },
+      }),
+      prisma.transaction.aggregate({
+        where: { accountId, userId, transactionType: { not: "INCOME" } },
         _sum: { amount: true },
       }),
     ]);
-    const income = incomeSum._sum.amount ?? new Prisma.Decimal(0);
-    const tx = txSum._sum.amount ?? new Prisma.Decimal(0);
-    return openingBalance.add(income).sub(tx);
+    const income = (incomeSum._sum.amount ?? new Prisma.Decimal(0)).add(txIncomeSum._sum.amount ?? new Prisma.Decimal(0));
+    const expense = txExpenseSum._sum.amount ?? new Prisma.Decimal(0);
+    return openingBalance.add(income).sub(expense);
   } catch {
     return openingBalance;
   }
@@ -58,6 +62,7 @@ function accountResponse(account: {
     accountType: account.accountType,
     openingBalance: account.openingBalance.toFixed(2),
     balance: balance.toFixed(2),
+    currentBalance: balance.toFixed(2),
     isActive: account.isActive,
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
@@ -73,7 +78,7 @@ export async function listAccounts(req: Request, res: Response): Promise<void> {
 
   const deltas = new Map<string, Prisma.Decimal>();
   try {
-    const [incomeByAccount, txByAccount] = await Promise.all([
+    const [incomeByAccount, txIncomeByAccount, txExpenseByAccount] = await Promise.all([
       prisma.incomeTransaction.groupBy({
         by: ["accountId"],
         where: { userId },
@@ -81,7 +86,12 @@ export async function listAccounts(req: Request, res: Response): Promise<void> {
       }),
       prisma.transaction.groupBy({
         by: ["accountId"],
-        where: { userId },
+        where: { userId, transactionType: "INCOME" },
+        _sum: { amount: true },
+      }),
+      prisma.transaction.groupBy({
+        by: ["accountId"],
+        where: { userId, transactionType: { not: "INCOME" } },
         _sum: { amount: true },
       }),
     ]);
@@ -91,9 +101,14 @@ export async function listAccounts(req: Request, res: Response): Promise<void> {
         deltas.set(inc.accountId, (deltas.get(inc.accountId) ?? new Prisma.Decimal(0)).add(inc._sum.amount));
       }
     }
-    for (const tx of txByAccount) {
-      if (tx.accountId && tx._sum.amount) {
-        deltas.set(tx.accountId, (deltas.get(tx.accountId) ?? new Prisma.Decimal(0)).sub(tx._sum.amount));
+    for (const inc of txIncomeByAccount) {
+      if (inc.accountId && inc._sum.amount) {
+        deltas.set(inc.accountId, (deltas.get(inc.accountId) ?? new Prisma.Decimal(0)).add(inc._sum.amount));
+      }
+    }
+    for (const exp of txExpenseByAccount) {
+      if (exp.accountId && exp._sum.amount) {
+        deltas.set(exp.accountId, (deltas.get(exp.accountId) ?? new Prisma.Decimal(0)).sub(exp._sum.amount));
       }
     }
   } catch {

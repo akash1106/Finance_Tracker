@@ -11,8 +11,12 @@ function param(req: Request): string {
   if (typeof req.params.id !== "string") throw new AppError(400, "VALIDATION_ERROR", "Transaction ID is required");
   return req.params.id;
 }
-function response(transaction: { id: string; userId: string; transactionType: string; amount: { toFixed: (digits: number) => string }; categoryId: string | null; subcategoryId: string | null; accountId: string; transactionDate: Date; paymentMethod: string | null; description: string | null; notes: string | null; createdAt: Date; updatedAt: Date }) {
-  return { ...transaction, amount: transaction.amount.toFixed(2) };
+function response(transaction: any) {
+  const amt = transaction.amount;
+  return {
+    ...transaction,
+    amount: typeof amt === "object" && amt !== null && "toFixed" in amt && typeof amt.toFixed === "function" ? amt.toFixed(2) : String(amt),
+  };
 }
 
 async function validateReferences(input: { accountId?: string | null; categoryId?: string | null; subcategoryId?: string | null; transactionType?: string }, userId: string): Promise<void> {
@@ -48,14 +52,23 @@ export async function listTransactions(req: Request, res: Response): Promise<voi
   };
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await prisma.$transaction([
-    prisma.transaction.findMany({ where, orderBy: { transactionDate: query.sort }, skip, take: query.limit }),
+    prisma.transaction.findMany({
+      where,
+      orderBy: { transactionDate: query.sort },
+      skip,
+      take: query.limit,
+      include: { category: true, subcategory: true, account: true },
+    }),
     prisma.transaction.count({ where }),
   ]);
   res.json({ success: true, data: items.map(response), pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) } });
 }
 
 export async function getTransaction(req: Request, res: Response): Promise<void> {
-  const transaction = await prisma.transaction.findFirst({ where: { id: param(req), userId: owner(req) } });
+  const transaction = await prisma.transaction.findFirst({
+    where: { id: param(req), userId: owner(req) },
+    include: { category: true, subcategory: true, account: true },
+  });
   if (!transaction) throw new AppError(404, "TRANSACTION_NOT_FOUND", "Transaction was not found");
   res.json({ success: true, data: response(transaction) });
 }
@@ -64,7 +77,10 @@ export async function createTransaction(req: Request, res: Response): Promise<vo
   const userId = owner(req);
   const input = req.body as CreateTransactionInput;
   await validateReferences(input, userId);
-  const transaction = await prisma.transaction.create({ data: { ...input, userId } });
+  const transaction = await prisma.transaction.create({
+    data: { ...input, userId },
+    include: { category: true, subcategory: true, account: true },
+  });
   res.status(201).json({ success: true, data: response(transaction), message: "Transaction created successfully" });
 }
 
@@ -75,7 +91,11 @@ export async function updateTransaction(req: Request, res: Response): Promise<vo
   if (!existing) throw new AppError(404, "TRANSACTION_NOT_FOUND", "Transaction was not found");
   const input = req.body as UpdateTransactionInput;
   await validateReferences({ ...existing, ...input }, userId);
-  const transaction = await prisma.transaction.update({ where: { id: transactionId }, data: input });
+  const transaction = await prisma.transaction.update({
+    where: { id: transactionId },
+    data: input,
+    include: { category: true, subcategory: true, account: true },
+  });
   res.json({ success: true, data: response(transaction), message: "Transaction updated successfully" });
 }
 

@@ -80,6 +80,7 @@ describe("finance module happy paths", () => {
       { _sum: { amount: null } },
       { _sum: { amount: null } },
       { _sum: { amount: null } },
+      { _sum: { amount: null } },
     ] as never);
     jest.spyOn(prisma.account, "aggregate").mockResolvedValue({ _sum: { openingBalance: null } } as never);
     expect((await request(app).get("/api/v1/dashboard").set(auth)).status).toBe(200);
@@ -123,7 +124,7 @@ describe("finance module happy paths", () => {
 describe("aggregation controller coverage", () => {
   it("covers dashboard aggregation controllers", async () => {
     jest.spyOn(prisma, "$transaction").mockResolvedValue([
-      { _sum: { amount: null } }, { _sum: { amount: null } }, { _sum: { amount: null } }, { _sum: { amount: null } },
+      { _sum: { amount: null } }, { _sum: { amount: null } }, { _sum: { amount: null } }, { _sum: { amount: null } }, { _sum: { amount: null } },
     ] as never);
     jest.spyOn(prisma.account, "aggregate").mockResolvedValue({ _sum: { openingBalance: null } } as never);
     const req = requestContext();
