@@ -4,6 +4,7 @@ import type {
   BudgetTemplateItem,
   MonthlyBudget,
   MonthlyBudgetItem,
+  BudgetSummaryData,
   CreateBudgetTemplateInput,
   GenerateBudgetInput,
 } from "@/types/budget";
@@ -13,7 +14,7 @@ export const budgetApi = {
   list: (params?: { year?: number; month?: number }) =>
     apiGet<MonthlyBudget[]>("/budgets", { params }),
   getById: (id: string) => apiGet<MonthlyBudget>(`/budgets/${id}`),
-  getSummary: (id: string) => apiGet<Record<string, unknown>>(`/budgets/${id}/summary`),
+  getSummary: (id: string) => apiGet<BudgetSummaryData>(`/budgets/${id}/summary`),
   getItems: (id: string) => apiGet<MonthlyBudgetItem[]>(`/budgets/${id}/items`),
   generate: (data: GenerateBudgetInput) => apiPost<MonthlyBudget>("/budgets/generate", data),
 

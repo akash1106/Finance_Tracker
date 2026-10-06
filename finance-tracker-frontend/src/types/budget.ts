@@ -2,10 +2,10 @@ export interface BudgetTemplateItem {
   id: string;
   budgetTemplateId: string;
   categoryId: string;
-  percentage: number;
+  percentage: number | string;
   category?: { id: string; name: string };
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BudgetTemplate {
@@ -15,19 +15,21 @@ export interface BudgetTemplate {
   description?: string | null;
   isActive: boolean;
   items: BudgetTemplateItem[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MonthlyBudgetItem {
   id: string;
   monthlyBudgetId: string;
   categoryId: string;
-  allocatedAmount: number;
-  spentAmount: number;
+  allocatedAmount: number | string;
+  spentAmount: number | string;
+  percentage?: number | string;
+  remaining?: number | string;
   category?: { id: string; name: string };
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MonthlyBudget {
@@ -37,13 +39,29 @@ export interface MonthlyBudget {
   incomeTransactionId: string;
   month: number;
   year: number;
-  totalIncome: number;
-  totalAllocated: number;
-  totalSpent: number;
+  allocatedAmount: number | string;
+  totalIncome?: number | string;
+  totalAllocated?: number | string;
+  totalSpent?: number | string;
   budgetTemplate?: BudgetTemplate;
+  incomeTransaction?: {
+    id: string;
+    amount: number | string;
+    receivedDate: string;
+    incomeSource?: { id: string; name: string; isSalary?: boolean };
+  };
   items: MonthlyBudgetItem[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BudgetSummaryData {
+  allocated: string;
+  spent: string;
+  remaining: string;
+  percentageUsed: string;
+  status: "NORMAL" | "WARNING" | "EXCEEDED";
+  items: MonthlyBudgetItem[];
 }
 
 export interface CreateBudgetTemplateInput {
@@ -56,6 +74,6 @@ export interface CreateBudgetTemplateInput {
 export interface GenerateBudgetInput {
   incomeTransactionId: string;
   budgetTemplateId: string;
-  month: number;
-  year: number;
+  month?: number;
+  year?: number;
 }

@@ -42,7 +42,7 @@ async function assertCategory(ownerId: string, categoryId: string): Promise<void
 export async function listTemplates(req: Request, res: Response): Promise<void> {
   const templates = await prisma.budgetTemplate.findMany({
     where: { userId: owner(req), isActive: true },
-    include: { items: true },
+    include: { items: { include: { category: true } } },
     orderBy: { name: "asc" },
   });
   res.json({ success: true, data: templates });

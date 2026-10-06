@@ -26,7 +26,11 @@ function money(value: Prisma.Decimal): string {
 async function getOwnedBudget(req: Request) {
   const budget = await prisma.monthlyBudget.findFirst({
     where: { id: param(req, "id"), userId: owner(req) },
-    include: { items: true },
+    include: {
+      budgetTemplate: true,
+      incomeTransaction: { include: { incomeSource: true } },
+      items: { include: { category: true } },
+    },
   });
   if (!budget) throw new AppError(404, "BUDGET_NOT_FOUND", "Monthly budget was not found");
   return budget;
@@ -44,7 +48,16 @@ async function spentByCategory(userId: string, year: number, month: number, cate
 export async function listBudgets(req: Request, res: Response): Promise<void> {
   const query = req.query as { year?: number; month?: number };
   const budgets = await prisma.monthlyBudget.findMany({
-    where: { userId: owner(req), ...(query.year ? { year: query.year } : {}), ...(query.month ? { month: query.month } : {}) },
+    where: {
+      userId: owner(req),
+      ...(query.year ? { year: Number(query.year) } : {}),
+      ...(query.month ? { month: Number(query.month) } : {}),
+    },
+    include: {
+      budgetTemplate: true,
+      incomeTransaction: { include: { incomeSource: true } },
+      items: { include: { category: true } },
+    },
     orderBy: [{ year: "desc" }, { month: "desc" }],
   });
   res.json({ success: true, data: budgets });
