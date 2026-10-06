@@ -52,6 +52,14 @@ export function useGenerateBudget() {
   });
 }
 
+export function useBudgetTemplate(id: string) {
+  return useQuery({
+    queryKey: queryKeys.budgets.templateDetail(id),
+    queryFn: () => budgetApi.getTemplateById(id),
+    enabled: Boolean(id),
+  });
+}
+
 export function useCreateBudgetTemplate() {
   const queryClient = useQueryClient();
 
@@ -66,3 +74,4 @@ export function useCreateBudgetTemplate() {
     },
   });
 }
+

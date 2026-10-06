@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
 import type {
   BudgetTemplate,
+  BudgetTemplateItem,
   MonthlyBudget,
   MonthlyBudgetItem,
   CreateBudgetTemplateInput,
@@ -28,4 +29,13 @@ export const budgetApi = {
     apiPost<{ isValid: boolean; totalPercentage: number; message: string }>(
       `/budget-templates/${id}/validate`
     ),
+  addTemplateItem: (templateId: string, data: { categoryId: string; percentage: number }) =>
+    apiPost<BudgetTemplateItem>(`/budget-templates/${templateId}/items`, data),
+  updateTemplateItem: (
+    templateId: string,
+    itemId: string,
+    data: { percentage: number }
+  ) => apiPatch<BudgetTemplateItem>(`/budget-templates/${templateId}/items/${itemId}`, data),
+  deleteTemplateItem: (templateId: string, itemId: string) =>
+    apiDelete<void>(`/budget-templates/${templateId}/items/${itemId}`),
 };
