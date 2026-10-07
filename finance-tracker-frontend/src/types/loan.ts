@@ -1,11 +1,14 @@
+export type LoanStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+
 export interface LoanPayment {
   id: string;
   loanId: string;
   accountId: string;
-  amount: number;
+  amount: number | string;
   paymentDate: string;
+  transactionId?: string;
   notes?: string | null;
-  account?: { id: string; name: string };
+  account?: { id: string; name: string; accountType?: string };
   createdAt: string;
 }
 
@@ -13,14 +16,20 @@ export interface Loan {
   id: string;
   userId: string;
   name: string;
-  principal: number;
-  remainingBalance: number;
-  interestRate?: number | null;
-  monthlyEmi: number;
+  principalAmount: number | string;
+  principal?: number | string; // Alias
+  interestRate?: number | string | null;
+  emiAmount: number | string;
+  monthlyEmi?: number | string; // Alias
   tenureMonths: number;
   startDate: string;
   endDate?: string | null;
-  isActive: boolean;
+  status: LoanStatus | string;
+  isActive?: boolean;
+  description?: string | null;
+  paidAmount?: number | string;
+  remainingPrincipal?: number | string;
+  remainingBalance?: number | string; // Alias
   payments?: LoanPayment[];
   createdAt: string;
   updatedAt: string;
@@ -28,12 +37,19 @@ export interface Loan {
 
 export interface CreateLoanInput {
   name: string;
-  principal: number;
+  principalAmount: number;
+  principal?: number;
   interestRate?: number;
-  monthlyEmi: number;
+  emiAmount: number;
+  monthlyEmi?: number;
   tenureMonths: number;
   startDate: string;
   endDate?: string;
+  description?: string;
+}
+
+export interface UpdateLoanInput extends Partial<CreateLoanInput> {
+  status?: LoanStatus;
 }
 
 export interface RecordLoanPaymentInput {

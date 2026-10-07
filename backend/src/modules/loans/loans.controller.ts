@@ -17,8 +17,16 @@ function money(value: Prisma.Decimal): string { return value.toFixed(2); }
 function loanResponse(loan: { id: string; userId: string; name: string; principalAmount: Prisma.Decimal; interestRate: Prisma.Decimal; emiAmount: Prisma.Decimal; tenureMonths: number; startDate: Date; endDate: Date | null; status: string; description: string | null; createdAt: Date; updatedAt: Date }) {
   return { ...loan, principalAmount: money(loan.principalAmount), interestRate: money(loan.interestRate), emiAmount: money(loan.emiAmount) };
 }
-function paymentResponse(payment: { id: string; loanId: string; accountId: string; transactionId: string; amount: Prisma.Decimal; paymentDate: Date; notes: string | null; createdAt: Date }) {
-  return { ...payment, amount: money(payment.amount) };
+function paymentResponse(payment: any) {
+  return {
+    ...payment,
+    amount:
+      typeof payment.amount === "number"
+        ? payment.amount.toFixed(2)
+        : payment.amount?.toFixed
+        ? payment.amount.toFixed(2)
+        : String(payment.amount),
+  };
 }
 async function getOwnedLoan(req: Request) {
   const loan = await prisma.loan.findFirst({ where: { id: param(req, "id"), userId: owner(req) } });
@@ -31,15 +39,47 @@ async function paidAmount(loanId: string): Promise<Prisma.Decimal> {
 }
 
 export async function listLoans(req: Request, res: Response): Promise<void> {
-  const loans = await prisma.loan.findMany({ where: { userId: owner(req), status: { not: "CANCELLED" } }, orderBy: { startDate: "desc" } });
-  res.json({ success: true, data: loans.map(loanResponse) });
+  const loans = await prisma.loan.findMany({
+    where: { userId: owner(req), status: { not: "CANCELLED" } },
+    include: { payments: true },
+    orderBy: { startDate: "desc" },
+  });
+  res.json({
+    success: true,
+    data: loans.map((l: any) => {
+      let paid = new Prisma.Decimal(0);
+      if (Array.isArray(l.payments)) {
+        for (const p of l.payments) {
+          if (p && p.amount) paid = paid.add(p.amount);
+        }
+      }
+      const remainingPrincipal = l.principalAmount.gt(paid) ? l.principalAmount.sub(paid) : new Prisma.Decimal(0);
+      return {
+        ...loanResponse(l),
+        paidAmount: money(paid),
+        remainingPrincipal: money(remainingPrincipal),
+      };
+    }),
+  });
 }
 export async function getLoan(req: Request, res: Response): Promise<void> {
   const loan = await getOwnedLoan(req);
-  const payments = await prisma.loanPayment.findMany({ where: { loanId: loan.id }, orderBy: { paymentDate: "desc" } });
+  const payments = await prisma.loanPayment.findMany({
+    where: { loanId: loan.id },
+    include: { account: true },
+    orderBy: { paymentDate: "desc" },
+  });
   const paid = payments.reduce((sum, payment) => sum.add(payment.amount), new Prisma.Decimal(0));
   const remainingPrincipal = loan.principalAmount.gt(paid) ? loan.principalAmount.sub(paid) : new Prisma.Decimal(0);
-  res.json({ success: true, data: { ...loanResponse(loan), paidAmount: money(paid), remainingPrincipal: money(remainingPrincipal), payments: payments.map(paymentResponse) } });
+  res.json({
+    success: true,
+    data: {
+      ...loanResponse(loan),
+      paidAmount: money(paid),
+      remainingPrincipal: money(remainingPrincipal),
+      payments: payments.map(paymentResponse),
+    },
+  });
 }
 export async function createLoan(req: Request, res: Response): Promise<void> {
   const loan = await prisma.loan.create({ data: { ...(req.body as CreateLoanInput), userId: owner(req), status: "ACTIVE" } });
@@ -57,7 +97,11 @@ export async function deactivateLoan(req: Request, res: Response): Promise<void>
 }
 export async function listLoanPayments(req: Request, res: Response): Promise<void> {
   const loan = await getOwnedLoan(req);
-  const payments = await prisma.loanPayment.findMany({ where: { loanId: loan.id }, orderBy: { paymentDate: "desc" } });
+  const payments = await prisma.loanPayment.findMany({
+    where: { loanId: loan.id },
+    include: { account: true },
+    orderBy: { paymentDate: "desc" },
+  });
   res.json({ success: true, data: payments.map(paymentResponse) });
 }
 export async function createLoanPayment(req: Request, res: Response): Promise<void> {
