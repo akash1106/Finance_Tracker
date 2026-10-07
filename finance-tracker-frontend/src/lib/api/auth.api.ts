@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { apiGet, apiPost, apiPatch } from "./client";
 import type { LoginInput, RegisterInput } from "@/schemas/auth.schema";
 import type { User, AuthResponseData } from "@/types/auth";
 import { setStoredToken, removeStoredToken } from "@/features/auth/auth.utils";
@@ -36,6 +36,14 @@ export const authApi = {
 
   getMe: async (): Promise<User> => {
     return apiGet<User>("/auth/me");
+  },
+
+  updateProfile: async (data: { name: string }): Promise<User> => {
+    return apiPatch<User>("/auth/profile", data);
+  },
+
+  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<void> => {
+    return apiPatch<void>("/auth/password", data);
   },
 
   logout: async (): Promise<void> => {

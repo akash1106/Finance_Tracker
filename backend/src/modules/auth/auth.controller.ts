@@ -152,3 +152,35 @@ export async function getMe(req: Request, res: Response): Promise<void> {
     message: "Authenticated user retrieved successfully",
   });
 }
+
+export async function updateProfile(req: Request, res: Response): Promise<void> {
+  const auth = req.auth;
+  if (!auth) throw new AppError(401, "UNAUTHORIZED", "Authentication token is required");
+  const { name } = req.body;
+  if (!name || typeof name !== "string") throw new AppError(400, "VALIDATION_ERROR", "Name is required");
+
+  const updated = await prisma.user.update({
+    where: { id: auth.userId },
+    data: { name: name.trim() },
+    select: { id: true, name: true, email: true, isActive: true, createdAt: true, updatedAt: true },
+  });
+
+  res.status(200).json({ success: true, data: updated, message: "Profile updated successfully" });
+}
+
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  const auth = req.auth;
+  if (!auth) throw new AppError(401, "UNAUTHORIZED", "Authentication token is required");
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) throw new AppError(400, "VALIDATION_ERROR", "Current and new password are required");
+
+  const user = await prisma.user.findUnique({ where: { id: auth.userId } });
+  if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    throw new AppError(400, "INVALID_CREDENTIALS", "Current password is incorrect");
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await prisma.user.update({ where: { id: auth.userId }, data: { passwordHash } });
+
+  res.status(200).json({ success: true, data: null, message: "Password updated successfully" });
+}
