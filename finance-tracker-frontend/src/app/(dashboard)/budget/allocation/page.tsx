@@ -49,6 +49,7 @@ interface AllocationRow {
   id: string; // local temp key or item id
   categoryId: string;
   percentage: number;
+  amount?: number | string;
 }
 
 const TYPE_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -80,6 +81,50 @@ export default function SalaryAllocationPage() {
   const [rows, setRows] = useState<AllocationRow[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
+  // Initial sensible default setup
+  const initializeDefaultRows = (cats: Category[]) => {
+    if (cats.length === 0) return;
+
+    const makeRow = (id: string, categoryId: string, percentage: number): AllocationRow => ({
+      id,
+      categoryId,
+      percentage,
+      amount: simulationSalary > 0 ? Math.round((percentage / 100) * simulationSalary) : 0,
+    });
+
+    // Pick up to 5 categories and distribute percentages
+    const sampleCats = cats.slice(0, Math.min(cats.length, 5));
+    if (sampleCats.length === 1) {
+      setRows([makeRow("row-1", sampleCats[0].id, 100)]);
+    } else if (sampleCats.length === 2) {
+      setRows([
+        makeRow("row-1", sampleCats[0].id, 60),
+        makeRow("row-2", sampleCats[1].id, 40),
+      ]);
+    } else if (sampleCats.length === 3) {
+      setRows([
+        makeRow("row-1", sampleCats[0].id, 50),
+        makeRow("row-2", sampleCats[1].id, 30),
+        makeRow("row-3", sampleCats[2].id, 20),
+      ]);
+    } else if (sampleCats.length === 4) {
+      setRows([
+        makeRow("row-1", sampleCats[0].id, 40),
+        makeRow("row-2", sampleCats[1].id, 30),
+        makeRow("row-3", sampleCats[2].id, 20),
+        makeRow("row-4", sampleCats[3].id, 10),
+      ]);
+    } else {
+      setRows([
+        makeRow("row-1", sampleCats[0].id, 35),
+        makeRow("row-2", sampleCats[1].id, 25),
+        makeRow("row-3", sampleCats[2].id, 20),
+        makeRow("row-4", sampleCats[3].id, 10),
+        makeRow("row-5", sampleCats[4].id, 10),
+      ]);
+    }
+  };
+
   // Populate rows when templates load or user selects an existing template
   useEffect(() => {
     if (selectedTemplateId === "NEW") {
@@ -94,11 +139,15 @@ export default function SalaryAllocationPage() {
         setTemplateDescription(found.description || "");
         if (found.items && found.items.length > 0) {
           setRows(
-            found.items.map((item) => ({
-              id: item.id,
-              categoryId: item.categoryId,
-              percentage: Number(item.percentage) || 0,
-            }))
+            found.items.map((item) => {
+              const pct = Number(item.percentage) || 0;
+              return {
+                id: item.id,
+                categoryId: item.categoryId,
+                percentage: pct,
+                amount: simulationSalary > 0 ? Math.round((pct / 100) * simulationSalary) : 0,
+              };
+            })
           );
         } else {
           setRows([]);
@@ -106,43 +155,6 @@ export default function SalaryAllocationPage() {
       }
     }
   }, [selectedTemplateId, templates, categories]);
-
-  // Initial sensible default setup
-  const initializeDefaultRows = (cats: Category[]) => {
-    if (cats.length === 0) return;
-
-    // Pick up to 5 categories and distribute percentages
-    const sampleCats = cats.slice(0, Math.min(cats.length, 5));
-    if (sampleCats.length === 1) {
-      setRows([{ id: "row-1", categoryId: sampleCats[0].id, percentage: 100 }]);
-    } else if (sampleCats.length === 2) {
-      setRows([
-        { id: "row-1", categoryId: sampleCats[0].id, percentage: 60 },
-        { id: "row-2", categoryId: sampleCats[1].id, percentage: 40 },
-      ]);
-    } else if (sampleCats.length === 3) {
-      setRows([
-        { id: "row-1", categoryId: sampleCats[0].id, percentage: 50 },
-        { id: "row-2", categoryId: sampleCats[1].id, percentage: 30 },
-        { id: "row-3", categoryId: sampleCats[2].id, percentage: 20 },
-      ]);
-    } else if (sampleCats.length === 4) {
-      setRows([
-        { id: "row-1", categoryId: sampleCats[0].id, percentage: 40 },
-        { id: "row-2", categoryId: sampleCats[1].id, percentage: 30 },
-        { id: "row-3", categoryId: sampleCats[2].id, percentage: 20 },
-        { id: "row-4", categoryId: sampleCats[3].id, percentage: 10 },
-      ]);
-    } else {
-      setRows([
-        { id: "row-1", categoryId: sampleCats[0].id, percentage: 35 },
-        { id: "row-2", categoryId: sampleCats[1].id, percentage: 25 },
-        { id: "row-3", categoryId: sampleCats[2].id, percentage: 20 },
-        { id: "row-4", categoryId: sampleCats[3].id, percentage: 10 },
-        { id: "row-5", categoryId: sampleCats[4].id, percentage: 10 },
-      ]);
-    }
-  };
 
   // Preset Handlers
   const applyPreset = (presetName: "50-30-20" | "balanced" | "fire") => {
@@ -161,8 +173,6 @@ export default function SalaryAllocationPage() {
       if (expenses[0]) rowsToSet.push({ id: `preset-1`, categoryId: expenses[0].id, percentage: 50 });
       if (expenses[1]) {
         rowsToSet.push({ id: `preset-2`, categoryId: expenses[1].id, percentage: 30 });
-      } else if (expenses[0]) {
-        // adjust if only one expense
       }
       if (savings[0]) {
         rowsToSet.push({ id: `preset-3`, categoryId: savings[0].id, percentage: 20 });
@@ -180,7 +190,12 @@ export default function SalaryAllocationPage() {
         return;
       }
 
-      setRows(rowsToSet);
+      setRows(
+        rowsToSet.map((r) => ({
+          ...r,
+          amount: simulationSalary > 0 ? Math.round((r.percentage / 100) * simulationSalary) : 0,
+        }))
+      );
       toast.success("Applied 50/30/20 Rule blueprint");
     } else if (presetName === "fire") {
       // 30% Living, 50% Wealth (Savings/Investments), 20% Flexible
@@ -207,7 +222,12 @@ export default function SalaryAllocationPage() {
         initializeDefaultRows(categories);
         return;
       }
-      setRows(rowsToSet);
+      setRows(
+        rowsToSet.map((r) => ({
+          ...r,
+          amount: simulationSalary > 0 ? Math.round((r.percentage / 100) * simulationSalary) : 0,
+        }))
+      );
       toast.success("Applied Aggressive FIRE Growth blueprint");
     } else {
       initializeDefaultRows(categories);
@@ -231,6 +251,7 @@ export default function SalaryAllocationPage() {
         id: `row-${Date.now()}`,
         categoryId: availableCat.id,
         percentage: newPercentage,
+        amount: simulationSalary > 0 ? Math.round((newPercentage / 100) * simulationSalary) : 0,
       },
     ]);
   };
@@ -247,21 +268,92 @@ export default function SalaryAllocationPage() {
     setRows(updated);
   };
 
-  // Update Percentage in Row
-  const handlePercentageChange = (index: number, val: number) => {
+  // Update Percentage in Row (vice versa: automatically syncs money amount)
+  const handlePercentageChange = (index: number, val: number | string) => {
     const updated = [...rows];
-    updated[index].percentage = Math.max(0, Math.min(100, Math.round(val)));
+    if (val === "" || val === undefined) {
+      updated[index].percentage = 0;
+      updated[index].amount = 0;
+    } else {
+      const num = typeof val === "string" ? parseFloat(val) : val;
+      const clamped = Math.max(0, Math.min(100, Math.round(num * 100) / 100));
+      const finalPct = isNaN(clamped) ? 0 : clamped;
+      updated[index].percentage = finalPct;
+      updated[index].amount =
+        simulationSalary > 0 ? Math.round((finalPct / 100) * simulationSalary) : 0;
+    }
     setRows(updated);
+  };
+
+  // Update Amount in Row (vice versa: automatically syncs percentage)
+  const handleAmountChange = (index: number, val: string) => {
+    if (simulationSalary <= 0) {
+      toast.error("Please enter a valid simulated monthly income first");
+      return;
+    }
+    const updated = [...rows];
+    if (val === "") {
+      updated[index].amount = "";
+      updated[index].percentage = 0;
+    } else {
+      const num = parseFloat(val);
+      const amt = Math.max(0, isNaN(num) ? 0 : num);
+      updated[index].amount = val;
+      const rawPct = (amt / simulationSalary) * 100;
+      const roundedPct = Math.min(100, Math.round(rawPct * 100) / 100);
+      updated[index].percentage = roundedPct;
+    }
+    setRows(updated);
+  };
+
+  // Auto-fill remaining percentage into the last or specified row
+  const handleFillRemaining = (index?: number) => {
+    const currentSum = rows.reduce((acc, r) => acc + (Number(r.percentage) || 0), 0);
+    const remaining = Math.max(0, Math.round((100 - currentSum) * 100) / 100);
+    if (remaining <= 0) return;
+
+    const targetIdx = index !== undefined ? index : rows.length - 1;
+    if (targetIdx >= 0 && targetIdx < rows.length) {
+      const updated = [...rows];
+      const newPct = Math.round((Number(updated[targetIdx].percentage) + remaining) * 100) / 100;
+      updated[targetIdx].percentage = newPct;
+      updated[targetIdx].amount =
+        simulationSalary > 0 ? Math.round((newPct / 100) * simulationSalary) : 0;
+      setRows(updated);
+      toast.success(
+        `Allocated remaining ${remaining}% to ${categoryMap.get(updated[targetIdx].categoryId)?.name || "category"}`
+      );
+    }
+  };
+
+  // Update Simulated Salary & sync all amounts
+  const handleSimulationSalaryChange = (newSalary: number) => {
+    const s = Math.max(0, newSalary);
+    setSimulationSalary(s);
+    setRows((prev) =>
+      prev.map((r) => ({
+        ...r,
+        amount: s > 0 ? Math.round((Number(r.percentage) / 100) * s) : 0,
+      }))
+    );
   };
 
   // Calculations
   const totalPercentage = useMemo(() => {
-    return rows.reduce((acc, r) => acc + (Number(r.percentage) || 0), 0);
+    const sum = rows.reduce((acc, r) => acc + (Number(r.percentage) || 0), 0);
+    return Math.round(sum * 100) / 100;
   }, [rows]);
 
-  const isValidAllocation = totalPercentage === 100;
-  const isUnderAllocated = totalPercentage < 100;
-  const isOverAllocated = totalPercentage > 100;
+  const totalAllocatedAmount = useMemo(() => {
+    return Math.round((totalPercentage / 100) * simulationSalary);
+  }, [totalPercentage, simulationSalary]);
+
+  const remainingPercentage = Math.max(0, Math.round((100 - totalPercentage) * 100) / 100);
+  const remainingAmount = Math.max(0, simulationSalary - totalAllocatedAmount);
+
+  const isValidAllocation = Math.abs(totalPercentage - 100) < 0.01;
+  const isUnderAllocated = totalPercentage < 100 && !isValidAllocation;
+  const isOverAllocated = totalPercentage > 100 && !isValidAllocation;
 
   // Category Map for fast lookup
   const categoryMap = useMemo(() => {
@@ -531,21 +623,33 @@ export default function SalaryAllocationPage() {
               </div>
 
               {/* Live Status Badge */}
-              <div>
+              <div className="flex items-center gap-2">
                 {isValidAllocation ? (
                   <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 gap-1 px-3 py-1 font-semibold text-xs">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    100% Valid
+                    100% Valid ({formatCurrency(simulationSalary)})
                   </Badge>
                 ) : isUnderAllocated ? (
-                  <Badge variant="outline" className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 gap-1 px-3 py-1 font-semibold text-xs">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    {totalPercentage}% (Remaining: {100 - totalPercentage}%)
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800 gap-1 px-3 py-1 font-semibold text-xs">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {totalPercentage}% (Remaining: {remainingPercentage}% • {formatCurrency(remainingAmount)})
+                    </Badge>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleFillRemaining()}
+                      className="h-7 text-[11px] px-2 text-primary border-primary/30 hover:bg-primary/10"
+                      title="Auto-fill remaining percentage into the last category"
+                    >
+                      Fill Remaining
+                    </Button>
+                  </div>
                 ) : (
                   <Badge variant="destructive" className="gap-1 px-3 py-1 font-semibold text-xs">
                     <XCircle className="h-3.5 w-3.5" />
-                    {totalPercentage}% (Over by {totalPercentage - 100}%)
+                    {totalPercentage}% (Over by {Math.round((totalPercentage - 100) * 100) / 100}% • +{formatCurrency(totalAllocatedAmount - simulationSalary)})
                   </Badge>
                 )}
               </div>
@@ -556,17 +660,22 @@ export default function SalaryAllocationPage() {
               <div className="p-4 bg-muted/30 border-b border-border">
                 <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
                   <span className="text-muted-foreground">Allocation Distribution Progress</span>
-                  <span
-                    className={
-                      isValidAllocation
-                        ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                        : isOverAllocated
-                        ? "text-rose-600 dark:text-rose-400 font-bold"
-                        : "text-amber-600 dark:text-amber-400 font-bold"
-                    }
-                  >
-                    {totalPercentage}% / 100%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-[11px] font-normal">
+                      Allocated: <strong className="text-foreground">{formatCurrency(totalAllocatedAmount)}</strong> of {formatCurrency(simulationSalary)}
+                    </span>
+                    <span
+                      className={
+                        isValidAllocation
+                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                          : isOverAllocated
+                          ? "text-rose-600 dark:text-rose-400 font-bold"
+                          : "text-amber-600 dark:text-amber-400 font-bold"
+                      }
+                    >
+                      {totalPercentage}% / 100%
+                    </span>
+                  </div>
                 </div>
                 <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
                   {rows.map((row, idx) => {
@@ -585,7 +694,7 @@ export default function SalaryAllocationPage() {
                         key={row.id || idx}
                         style={{ width: `${Math.min(100, row.percentage)}%` }}
                         className={`${color} h-full border-r border-background/20 transition-all duration-300`}
-                        title={`${cat?.name || "Category"}: ${row.percentage}%`}
+                        title={`${cat?.name || "Category"}: ${row.percentage}% (${formatCurrency((row.percentage / 100) * simulationSalary)})`}
                       />
                     );
                   })}
@@ -599,7 +708,7 @@ export default function SalaryAllocationPage() {
                   const typeConfig = selectedCat
                     ? TYPE_BADGES[selectedCat.categoryType] || TYPE_BADGES.EXPENSE
                     : TYPE_BADGES.EXPENSE;
-                  const estimatedAmount = (row.percentage / 100) * simulationSalary;
+                  const estimatedAmount = Math.round((row.percentage / 100) * simulationSalary);
 
                   return (
                     <div
@@ -607,7 +716,7 @@ export default function SalaryAllocationPage() {
                       className="p-3.5 rounded-xl border border-border bg-card/60 hover:bg-card hover:border-primary/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       {/* Category Selection */}
-                      <div className="flex-1 min-w-[220px]">
+                      <div className="flex-1 min-w-[200px]">
                         <div className="flex items-center gap-2 mb-1">
                           <label className="text-xs font-semibold text-foreground">
                             Category {idx + 1}
@@ -639,14 +748,32 @@ export default function SalaryAllocationPage() {
                       <div className="w-full sm:w-48 space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground font-medium">Weight</span>
-                          <span className="font-bold text-foreground">{row.percentage}%</span>
+                          <div className="flex items-center gap-0.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="any"
+                              value={row.percentage === 0 ? "" : row.percentage}
+                              onChange={(e) =>
+                                handlePercentageChange(
+                                  idx,
+                                  e.target.value === "" ? 0 : parseFloat(e.target.value)
+                                )
+                              }
+                              placeholder="0"
+                              className="w-14 h-6 text-right text-xs font-bold bg-background rounded px-1.5 border border-input focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <span className="font-bold text-foreground text-xs">%</span>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => handlePercentageChange(idx, row.percentage - 5)}
-                            className="h-8 w-8 rounded-md border border-input bg-muted/40 hover:bg-muted text-xs font-semibold flex items-center justify-center cursor-pointer"
+                            className="h-8 w-8 rounded-md border border-input bg-muted/40 hover:bg-muted text-xs font-semibold flex items-center justify-center cursor-pointer shrink-0"
+                            title="-5%"
                           >
                             -5
                           </button>
@@ -664,21 +791,39 @@ export default function SalaryAllocationPage() {
                           <button
                             type="button"
                             onClick={() => handlePercentageChange(idx, row.percentage + 5)}
-                            className="h-8 w-8 rounded-md border border-input bg-muted/40 hover:bg-muted text-xs font-semibold flex items-center justify-center cursor-pointer"
+                            className="h-8 w-8 rounded-md border border-input bg-muted/40 hover:bg-muted text-xs font-semibold flex items-center justify-center cursor-pointer shrink-0"
+                            title="+5%"
                           >
                             +5
                           </button>
                         </div>
                       </div>
 
-                      {/* Amount preview for this row */}
-                      <div className="w-full sm:w-32 text-left sm:text-right shrink-0">
-                        <span className="text-[11px] text-muted-foreground block">
-                          Preview Value
-                        </span>
-                        <span className="text-sm font-bold text-foreground">
-                          {formatCurrency(estimatedAmount)}
-                        </span>
+                      {/* Money / Amount Input for this row (Vice Versa Sync) */}
+                      <div className="w-full sm:w-36 space-y-1 shrink-0">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground font-medium">Amount (₹)</span>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-semibold text-muted-foreground pointer-events-none">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={
+                              row.amount !== undefined
+                                ? row.amount
+                                : simulationSalary > 0
+                                ? estimatedAmount || ""
+                                : ""
+                            }
+                            onChange={(e) => handleAmountChange(idx, e.target.value)}
+                            placeholder="0"
+                            className="h-8 w-full pl-6 pr-2 rounded-lg border border-input bg-background text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          />
+                        </div>
                       </div>
 
                       {/* Delete Row */}
@@ -764,7 +909,7 @@ export default function SalaryAllocationPage() {
                     min="1000"
                     step="1000"
                     value={simulationSalary}
-                    onChange={(e) => setSimulationSalary(Math.max(0, Number(e.target.value)))}
+                    onChange={(e) => handleSimulationSalaryChange(Number(e.target.value))}
                     className="h-10 w-full pl-7 pr-3 rounded-lg border border-input bg-background text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -773,7 +918,7 @@ export default function SalaryAllocationPage() {
                     <button
                       key={amt}
                       type="button"
-                      onClick={() => setSimulationSalary(amt)}
+                      onClick={() => handleSimulationSalaryChange(amt)}
                       className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                         simulationSalary === amt
                           ? "bg-primary text-primary-foreground border-primary"
