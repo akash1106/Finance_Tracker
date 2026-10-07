@@ -10,14 +10,14 @@ import { budgetPerformance, categoryTrends, fixedExpenseRatio, incomeGrowth, sav
 import { categoryReport, cashFlowReport, monthlyReport, netWorthReport, yearlyReport } from "../src/modules/reports/reports.controller";
 import type { Request, Response } from "express";
 import { currentNetWorth, netWorthHistory } from "../src/modules/net-worth/net-worth.controller";
-import { listNotifications, listUnreadNotifications, markAllNotificationsRead, markNotificationRead } from "../src/modules/notifications/notifications.controller";
+import { createNotification, deleteNotification, listNotifications, listUnreadNotifications, markAllNotificationsRead, markNotificationRead } from "../src/modules/notifications/notifications.controller";
 
 const app = createApp();
 const token = createAccessToken("user-id", "user@example.com");
 const auth = { Authorization: `Bearer ${token}` };
 
-function requestContext(query: Record<string, unknown> = {}, params: Record<string, string> = {}): Request {
-  return { auth: { userId: "user-id", email: "user@example.com" }, query, params } as unknown as Request;
+function requestContext(query: Record<string, unknown> = {}, params: Record<string, string> = {}, body: Record<string, unknown> = {}): Request {
+  return { auth: { userId: "user-id", email: "user@example.com" }, query, params, body } as unknown as Request;
 }
 function responseContext(): Response {
   return { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis(), send: jest.fn().mockReturnThis() } as unknown as Response;
@@ -183,14 +183,16 @@ describe("aggregation controller coverage", () => {
   });
 
   it("covers notification operations", async () => {
-    const req = requestContext({}, { id: "11111111-1111-4111-8111-111111111111" });
+    const req = requestContext({}, { id: "11111111-1111-4111-8111-111111111111" }, { title: "Test Alert", message: "Testing alert" });
     const res = responseContext();
     const notification = { id: "11111111-1111-4111-8111-111111111111", userId: "user-id", title: "Alert", message: "Test", notificationType: "BUDGET_WARNING", referenceId: null, isRead: false, createdAt: new Date() };
     jest.spyOn(prisma.notification, "findMany").mockResolvedValue([notification]);
     jest.spyOn(prisma.notification, "findFirst").mockResolvedValue(notification);
+    jest.spyOn(prisma.notification, "create").mockResolvedValue(notification);
     jest.spyOn(prisma.notification, "update").mockResolvedValue({ ...notification, isRead: true });
     jest.spyOn(prisma.notification, "updateMany").mockResolvedValue({ count: 1 });
-    await listNotifications(req, res); await listUnreadNotifications(req, res); await markNotificationRead(req, res); await markAllNotificationsRead(req, res);
+    jest.spyOn(prisma.notification, "delete").mockResolvedValue(notification);
+    await listNotifications(req, res); await listUnreadNotifications(req, res); await markNotificationRead(req, res); await markAllNotificationsRead(req, res); await deleteNotification(req, res); await createNotification(req, res);
     expect(res.json).toHaveBeenCalled();
   });
 });

@@ -14,3 +14,4 @@ export * from "./fixed-expense";
 export * from "./recurring";
 export * from "./report";
 export * from "./analytics";
+export * from "./notification";

@@ -1,19 +1,22 @@
-import { apiGet, apiPatch } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+import type { NotificationItem } from "@/types";
 
-export interface NotificationItem {
-  id: string;
-  userId: string;
+export type { NotificationItem };
+
+export interface CreateNotificationDto {
   title: string;
   message: string;
-  notificationType: string;
-  isRead: boolean;
-  actionUrl?: string | null;
-  createdAt: string;
+  notificationType?: string;
+  referenceId?: string | null;
 }
 
 export const notificationsApi = {
   list: () => apiGet<NotificationItem[]>("/notifications"),
   listUnread: () => apiGet<NotificationItem[]>("/notifications/unread"),
-  markAsRead: (id: string) => apiPatch<NotificationItem>(`/notifications/${id}/read`),
+  create: (data: CreateNotificationDto) =>
+    apiPost<NotificationItem>("/notifications", data),
+  markAsRead: (id: string) =>
+    apiPatch<NotificationItem>(`/notifications/${id}/read`),
   markAllAsRead: () => apiPatch<{ message: string }>("/notifications/read-all"),
+  delete: (id: string) => apiDelete<{ message: string }>(`/notifications/${id}`),
 };
