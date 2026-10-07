@@ -1,21 +1,24 @@
 import { apiGet } from "./client";
+import type {
+  ReportQueryParams,
+  MonthlyReportData,
+  YearlyReportData,
+  NetWorthReportData,
+  CategoryReportItem,
+  CashFlowReportData,
+} from "@/types/report";
 
-export interface ReportQueryParams {
-  year?: number;
-  month?: number;
-  startDate?: string;
-  endDate?: string;
-}
+export { type ReportQueryParams };
 
 export const reportsApi = {
   getMonthlyReport: (params?: ReportQueryParams) =>
-    apiGet<unknown>("/reports/monthly", { params }),
+    apiGet<MonthlyReportData>("/reports/monthly", { params }),
   getYearlyReport: (params?: ReportQueryParams) =>
-    apiGet<unknown>("/reports/yearly", { params }),
+    apiGet<YearlyReportData>("/reports/yearly", { params }),
   getNetWorthReport: (params?: ReportQueryParams) =>
-    apiGet<unknown>("/reports/net-worth", { params }),
+    apiGet<NetWorthReportData>("/reports/net-worth", { params }),
   getCategoryReport: (params?: ReportQueryParams) =>
-    apiGet<unknown>("/reports/category", { params }),
+    apiGet<CategoryReportItem[]>("/reports/category", { params }),
   getCashFlowReport: (params?: ReportQueryParams) =>
-    apiGet<unknown>("/reports/cash-flow", { params }),
+    apiGet<CashFlowReportData>("/reports/cash-flow", { params }),
 };
