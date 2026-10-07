@@ -30,5 +30,9 @@ export interface BudgetUtilizationDataPoint {
   category: string;
   allocated: number;
   spent: number;
-  percentage: number;
+  percentage?: number;
+  remaining?: number;
+  percentageUsed?: number;
+  budgetId?: string;
+  categoryId?: string;
 }

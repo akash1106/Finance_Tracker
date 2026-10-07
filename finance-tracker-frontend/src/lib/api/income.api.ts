@@ -8,8 +8,14 @@ import type {
 } from "@/types/income";
 
 export const incomeApi = {
-  list: (params?: IncomeFilterParams) =>
-    apiGetPaginated<IncomeTransaction>("/income", { params }),
+  list: (params?: IncomeFilterParams & { from?: string; to?: string }) => {
+    const queryParams = {
+      ...params,
+      ...(params?.startDate && !params?.from ? { from: params.startDate } : {}),
+      ...(params?.endDate && !params?.to ? { to: params.endDate } : {}),
+    };
+    return apiGetPaginated<IncomeTransaction>("/income", { params: queryParams });
+  },
   getById: (id: string) => apiGet<IncomeTransaction>(`/income/${id}`),
   create: (data: CreateIncomeInput) => apiPost<IncomeTransaction>("/income", data),
   update: (id: string, data: UpdateIncomeInput) =>

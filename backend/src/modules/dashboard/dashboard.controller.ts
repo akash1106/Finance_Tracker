@@ -12,7 +12,15 @@ function money(value: Prisma.Decimal): string {
   return value.toFixed(2);
 }
 function dateRange(query: DashboardQuery): { from?: Date; to?: Date } {
-  return { ...(query.from ? { from: query.from } : {}), ...(query.to ? { to: query.to } : {}) };
+  if (query.from || query.to) {
+    return { ...(query.from ? { from: query.from } : {}), ...(query.to ? { to: query.to } : {}) };
+  }
+  if (query.year && query.month) {
+    const from = new Date(Date.UTC(query.year, query.month - 1, 1));
+    const to = new Date(Date.UTC(query.year, query.month, 0, 23, 59, 59, 999));
+    return { from, to };
+  }
+  return {};
 }
 function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -195,7 +203,7 @@ export async function getBudgetUtilization(req: Request, res: Response): Promise
   const query = req.query as unknown as DashboardQuery;
   const budgets = await prisma.monthlyBudget.findMany({
     where: { userId: owner(req), ...(query.year ? { year: query.year } : {}), ...(query.month ? { month: query.month } : {}) },
-    include: { items: true },
+    include: { items: { include: { category: { select: { name: true } } } } },
   });
 
   const data = [];
@@ -211,6 +219,7 @@ export async function getBudgetUtilization(req: Request, res: Response): Promise
       data.push({
         budgetId: budget.id,
         categoryId: item.categoryId,
+        category: (item as unknown as { category?: { name: string } }).category?.name ?? "Category",
         allocated: money(item.allocatedAmount),
         spent: money(spentAmount),
         remaining: money(item.allocatedAmount.sub(spentAmount)),

@@ -81,6 +81,8 @@ export const queryKeys = {
       ["dashboard", "budgetUtilization", params] as const,
     netWorth: (params?: Record<string, unknown>) =>
       ["dashboard", "netWorth", params] as const,
+    savings: () => ["dashboard", "savings"] as const,
+    investments: () => ["dashboard", "investments"] as const,
   },
   reports: {
     monthly: (params?: Record<string, unknown>) =>

@@ -9,6 +9,10 @@ import type {
 export interface DashboardQueryParams {
   startDate?: string;
   endDate?: string;
+  from?: string;
+  to?: string;
+  year?: number;
+  month?: number;
 }
 
 export const dashboardApi = {

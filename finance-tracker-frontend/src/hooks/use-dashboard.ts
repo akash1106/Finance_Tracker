@@ -45,3 +45,11 @@ export function useNetWorth(params?: DashboardQueryParams) {
     queryFn: () => dashboardApi.getNetWorth(params),
   });
 }
+
+export function useSavingsHistory() {
+  return useQuery({
+    queryKey: queryKeys.dashboard.savings(),
+    queryFn: () => dashboardApi.getSavingsHistory(),
+  });
+}
+
