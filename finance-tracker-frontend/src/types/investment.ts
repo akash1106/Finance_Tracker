@@ -1,4 +1,5 @@
 export type InvestmentType =
+  | "MUTUAL_FUND"
   | "MUTUAL_FUNDS"
   | "STOCKS"
   | "GOLD"
@@ -12,10 +13,11 @@ export interface InvestmentContribution {
   id: string;
   investmentId: string;
   accountId: string;
-  amount: number;
-  contributionDate: string;
+  amount: number | string;
+  investmentDate: string;
+  transactionId?: string;
   notes?: string | null;
-  account?: { id: string; name: string };
+  account?: { id: string; name: string; accountType?: string };
   createdAt: string;
 }
 
@@ -24,9 +26,10 @@ export interface Investment {
   userId: string;
   name: string;
   investmentType: InvestmentType | string;
-  totalInvested: number;
-  targetAmount?: number | null;
-  startDate: string;
+  totalInvested?: number | string;
+  totalContributed?: number | string;
+  targetAmount?: number | string | null;
+  startDate?: string | null;
   description?: string | null;
   isActive: boolean;
   contributions?: InvestmentContribution[];
@@ -38,13 +41,17 @@ export interface CreateInvestmentInput {
   name: string;
   investmentType: InvestmentType | string;
   targetAmount?: number;
-  startDate: string;
+  startDate?: string;
   description?: string;
+}
+
+export interface UpdateInvestmentInput extends Partial<CreateInvestmentInput> {
+  isActive?: boolean;
 }
 
 export interface AddInvestmentContributionInput {
   accountId: string;
   amount: number;
-  contributionDate: string;
+  investmentDate: string;
   notes?: string;
 }

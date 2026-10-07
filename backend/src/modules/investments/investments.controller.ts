@@ -17,8 +17,16 @@ function money(value: Prisma.Decimal): string { return value.toFixed(2); }
 function investmentResponse(investment: { id: string; userId: string; name: string; investmentType: string; description: string | null; isActive: boolean; createdAt: Date; updatedAt: Date }) {
   return investment;
 }
-function contributionResponse(contribution: { id: string; investmentId: string; accountId: string; amount: Prisma.Decimal; investmentDate: Date; transactionId: string; notes: string | null; createdAt: Date }) {
-  return { ...contribution, amount: money(contribution.amount) };
+function contributionResponse(contribution: any) {
+  return {
+    ...contribution,
+    amount:
+      typeof contribution.amount === "number"
+        ? contribution.amount.toFixed(2)
+        : contribution.amount?.toFixed
+        ? contribution.amount.toFixed(2)
+        : String(contribution.amount),
+  };
 }
 async function getOwnedInvestment(req: Request) {
   const investment = await prisma.investment.findFirst({ where: { id: param(req, "id"), userId: owner(req) } });
@@ -27,14 +35,47 @@ async function getOwnedInvestment(req: Request) {
 }
 
 export async function listInvestments(req: Request, res: Response): Promise<void> {
-  const investments = await prisma.investment.findMany({ where: { userId: owner(req), isActive: true }, orderBy: { name: "asc" } });
-  res.json({ success: true, data: investments.map(investmentResponse) });
+  const investments = await prisma.investment.findMany({
+    where: { userId: owner(req), isActive: true },
+    include: { contributions: true },
+    orderBy: { name: "asc" },
+  });
+  res.json({
+    success: true,
+    data: investments.map((inv: any) => {
+      let total = new Prisma.Decimal(0);
+      if (Array.isArray(inv.contributions)) {
+        for (const c of inv.contributions) {
+          if (c && c.amount) {
+            total = total.add(c.amount);
+          }
+        }
+      }
+      return {
+        ...investmentResponse(inv),
+        totalContributed: money(total),
+        totalInvested: money(total),
+      };
+    }),
+  });
 }
 export async function getInvestment(req: Request, res: Response): Promise<void> {
   const investment = await getOwnedInvestment(req);
-  const contributions = await prisma.investmentContribution.findMany({ where: { investmentId: investment.id }, orderBy: { investmentDate: "desc" } });
+  const contributions = await prisma.investmentContribution.findMany({
+    where: { investmentId: investment.id },
+    include: { account: true },
+    orderBy: { investmentDate: "desc" },
+  });
   const total = contributions.reduce((sum, contribution) => sum.add(contribution.amount), new Prisma.Decimal(0));
-  res.json({ success: true, data: { ...investmentResponse(investment), totalContributed: money(total), contributions: contributions.map(contributionResponse) } });
+  res.json({
+    success: true,
+    data: {
+      ...investmentResponse(investment),
+      totalContributed: money(total),
+      totalInvested: money(total),
+      contributions: contributions.map(contributionResponse),
+    },
+  });
 }
 export async function createInvestment(req: Request, res: Response): Promise<void> {
   const investment = await prisma.investment.create({ data: { ...(req.body as CreateInvestmentInput), userId: owner(req) } });
@@ -52,7 +93,11 @@ export async function deactivateInvestment(req: Request, res: Response): Promise
 }
 export async function listInvestmentContributions(req: Request, res: Response): Promise<void> {
   const investment = await getOwnedInvestment(req);
-  const contributions = await prisma.investmentContribution.findMany({ where: { investmentId: investment.id }, orderBy: { investmentDate: "desc" } });
+  const contributions = await prisma.investmentContribution.findMany({
+    where: { investmentId: investment.id },
+    include: { account: true },
+    orderBy: { investmentDate: "desc" },
+  });
   res.json({ success: true, data: contributions.map(contributionResponse) });
 }
 export async function createInvestmentContribution(req: Request, res: Response): Promise<void> {

@@ -3,7 +3,17 @@ import { z } from "zod";
 const uuid = z.string().uuid("Must be a valid UUID");
 export const investmentIdSchema = z.object({ id: uuid });
 export const investmentContributionIdSchema = z.object({ id: uuid, contributionId: uuid });
-export const investmentTypeSchema = z.enum(["MUTUAL_FUND", "GOLD", "FD", "OTHER"]);
+export const investmentTypeSchema = z.enum([
+  "MUTUAL_FUND",
+  "MUTUAL_FUNDS",
+  "STOCKS",
+  "GOLD",
+  "FD",
+  "RD",
+  "CRYPTO",
+  "REAL_ESTATE",
+  "OTHER",
+]);
 export const createInvestmentSchema = z.object({
   name: z.string().trim().min(1, "Investment name is required").max(150),
   investmentType: investmentTypeSchema,
