@@ -17,8 +17,11 @@ function money(value: Prisma.Decimal): string { return value.toFixed(2); }
 function goalResponse(goal: { id: string; userId: string; name: string; targetAmount: Prisma.Decimal; currentAmount: Prisma.Decimal; targetDate: Date | null; description: string | null; status: string; createdAt: Date; updatedAt: Date }) {
   return { ...goal, targetAmount: money(goal.targetAmount), currentAmount: money(goal.currentAmount) };
 }
-function contributionResponse(contribution: { id: string; savingsGoalId: string; accountId: string; amount: Prisma.Decimal; contributionDate: Date; transactionId: string; notes: string | null; createdAt: Date }) {
-  return { ...contribution, amount: money(contribution.amount) };
+function contributionResponse(contribution: any) {
+  return {
+    ...contribution,
+    amount: typeof contribution.amount === "number" ? contribution.amount.toFixed(2) : contribution.amount?.toFixed ? contribution.amount.toFixed(2) : String(contribution.amount),
+  };
 }
 async function getOwnedGoal(req: Request) {
   const goal = await prisma.savingsGoal.findFirst({ where: { id: param(req, "id"), userId: owner(req) } });
@@ -32,7 +35,11 @@ export async function listSavingsGoals(req: Request, res: Response): Promise<voi
 }
 export async function getSavingsGoal(req: Request, res: Response): Promise<void> {
   const goal = await getOwnedGoal(req);
-  const contributions = await prisma.savingsContribution.findMany({ where: { savingsGoalId: goal.id }, orderBy: { contributionDate: "desc" } });
+  const contributions = await prisma.savingsContribution.findMany({
+    where: { savingsGoalId: goal.id },
+    include: { account: true },
+    orderBy: { contributionDate: "desc" },
+  });
   res.json({ success: true, data: { ...goalResponse(goal), contributions: contributions.map(contributionResponse) } });
 }
 export async function createSavingsGoal(req: Request, res: Response): Promise<void> {
@@ -52,7 +59,11 @@ export async function deactivateSavingsGoal(req: Request, res: Response): Promis
 }
 export async function listContributions(req: Request, res: Response): Promise<void> {
   const goal = await getOwnedGoal(req);
-  const contributions = await prisma.savingsContribution.findMany({ where: { savingsGoalId: goal.id }, orderBy: { contributionDate: "desc" } });
+  const contributions = await prisma.savingsContribution.findMany({
+    where: { savingsGoalId: goal.id },
+    include: { account: true },
+    orderBy: { contributionDate: "desc" },
+  });
   res.json({ success: true, data: contributions.map(contributionResponse) });
 }
 export async function createContribution(req: Request, res: Response): Promise<void> {
